@@ -11,6 +11,7 @@ namespace IncidentService.Helpers
             CreateMap<Incident, GetAllInvoicesDTO>();
             CreateMap<CreateIncidentDto, Incident>();
             CreateMap<Incident, IncidentDTO>();
+            CreateMap<UpdateIncidentDTO, Incident>();
         }
     }
 }
