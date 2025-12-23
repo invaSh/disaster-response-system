@@ -28,6 +28,7 @@ namespace IncidentService.Services
         public async Task<Incident> CreateIncident(CreateIncidentDto createIncident)
         {
             var incident = mapper.Map<Incident>(createIncident);
+            incident.IncidentId = GenerateIncidentCode();
             _context.Incidents.Add(incident);
             await _context.SaveChangesAsync();
             return incident;
@@ -39,5 +40,33 @@ namespace IncidentService.Services
                 .AsNoTracking()
                 .FirstOrDefaultAsync(i => i.Id == id);
         }
+
+        public async Task<Incident> UpdateIncidentById(Guid id, UpdateIncidentDTO updateIncident)
+        {
+            var incident = await _context.Incidents
+                .FirstOrDefaultAsync(i => i.Id == id);
+            if (incident == null) throw new KeyNotFoundException("Incident not found");
+            mapper.Map(updateIncident, incident);
+            await _context.SaveChangesAsync();
+            return incident;
+        }
+
+        public async Task<Incident> DeleteIncident(Guid id)
+        {
+            var incident = await _context.Incidents
+                .FirstOrDefaultAsync(i => i.Id == id);
+            if (incident == null) throw new KeyNotFoundException("Incident not found");
+            _context.Incidents.Remove(incident);
+            await _context.SaveChangesAsync();
+            return incident;
+        }
+
+
+        private static string GenerateIncidentCode()
+        {
+            var suffix = Guid.NewGuid().ToString("N")[..4].ToUpper();
+            return $"INC-{suffix}";
+        }
+
     }
 }

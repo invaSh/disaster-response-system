@@ -46,5 +46,20 @@ namespace IncidentService.Controllers
             }
             return Ok(_mapper.Map<IncidentDTO>(incident));
         }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateIncidentById(Guid id, [FromBody] UpdateIncidentDTO updateIncidentDto)
+        {
+            var updatedIncident = await _incidentService.UpdateIncidentById(id, updateIncidentDto);
+            return Ok(_mapper.Map<IncidentDTO>(updatedIncident));
+        }
+        
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteIncident(Guid id)
+        {
+            var result = await _incidentService.DeleteIncident(id);
+            if (result == null) return BadRequest("Something went wrong.");
+            return Ok("Incident deleted successfully.");
+        }
     }
 }
