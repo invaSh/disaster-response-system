@@ -31,9 +31,9 @@ namespace IncidentService.Domain
 
         public ICollection<Update> Updates { get; set; } 
 
-        public ICollection<MediaFile> MediaFiles { get; set; }
+        public ICollection<MediaFile>? MediaFiles { get; set; }
 
-        public Dictionary<string, string> Metadata { get; set; } 
+        public Dictionary<string, string>? Metadata { get; set; } 
     }
 
 }

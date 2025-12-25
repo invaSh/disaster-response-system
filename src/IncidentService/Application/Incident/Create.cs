@@ -26,7 +26,7 @@ namespace IncidentService.Application.Incident
 
             public string Severity { get; set; }
 
-            public List<MediaFileDTO> MediaFiles { get; set; }
+            public List<MediaFileDTO>? MediaFiles { get; set; }
         }
 
         public class CommandValidator : AbstractValidator<Command>
