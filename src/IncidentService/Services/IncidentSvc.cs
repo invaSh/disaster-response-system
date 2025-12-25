@@ -28,6 +28,21 @@ namespace IncidentService.Services
              .ToListAsync();
         }
 
+        public async Task<Incident> GetIncidentById(Guid id)
+        {
+            var incident = await _context.Incidents.FirstOrDefaultAsync(i => i.Id == id);
+            if (incident == null)
+            {
+                throw new StatusException(
+                    HttpStatusCode.NotFound,
+                    "NotFound",
+                    "Incident not found",
+                    ""
+                );
+            }
+            return incident;
+        }
+
         public async Task<Incident> CreateIncident(Create.Command createIncident)
         {
             try
@@ -46,28 +61,11 @@ namespace IncidentService.Services
             }
         }
 
-
-        public async Task<Incident> GetIncidentById(Guid id)
-        {
-            var incident = await _context.Incidents.FirstOrDefaultAsync(i => i.Id == id);
-            if (incident == null)
-            {
-                throw new StatusException(
-                    HttpStatusCode.NotFound,
-                    "NotFound",
-                    "Incident not found",
-                    ""
-                );
-            }
-            return incident;
-        }
-
-
         public async Task<Incident> UpdateIncidentById(Guid id, Application.Incident.Update.Command updateIncident)
         {
-            var incident = await GetIncidentById(id);
             try
             {
+                var incident = await GetIncidentById(id);
                 mapper.Map(updateIncident, incident);
                 await _context.SaveChangesAsync();
                 return incident;
@@ -80,12 +78,17 @@ namespace IncidentService.Services
 
         public async Task<Incident> DeleteIncident(Guid id)
         {
-            var incident = await _context.Incidents
-                .FirstOrDefaultAsync(i => i.Id == id);
-            if (incident == null) throw new KeyNotFoundException("Incident not found");
-            _context.Incidents.Remove(incident);
-            await _context.SaveChangesAsync();
-            return incident;
+            try
+            {
+                var incident = await GetIncidentById(id);
+                _context.Incidents.Remove(incident);
+                await _context.SaveChangesAsync();
+                return incident;
+            }
+            catch (Exception ex)
+            {
+                throw HelperService.MapToStatusException(ex);
+            }
         }
     }
 }

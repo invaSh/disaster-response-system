@@ -44,5 +44,12 @@ namespace IncidentService.Controllers
             return Ok(new { message = "Incident updated successfully" });
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            await _mediator.Send(new Delete.Command { ID = id });
+            return Ok(new { message = "Incident deleted successfully" });
+        }
+
     }
 }
