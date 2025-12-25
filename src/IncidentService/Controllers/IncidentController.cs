@@ -19,19 +19,25 @@ namespace IncidentService.Controllers
 
 
         [HttpGet]
-        public async Task<List<IncidentDTO>> GetAllIncidents()
+        public async Task<List<IncidentDTO>> GetAll()
         {
             return await _mediator.Send(new GetAll.Query());
         }
 
+        [HttpGet("{id}")]
+        public async Task<IncidentDTO> GetOne(Guid id)
+        {
+            return await _mediator.Send(new GetOne.Query { ID = id });
+        }
+
         [HttpPost]
-        public async Task<IncidentDTO> CreateIncident([FromBody] Create.Command command)
+        public async Task<IncidentDTO> Create([FromBody] Create.Command command)
         {
             return await _mediator.Send(command);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateIncident(Guid id, [FromBody] Update.Command command)
+        public async Task<IActionResult> Update(Guid id, [FromBody] Update.Command command)
         {
             command.ID = id;
             await _mediator.Send(command);
