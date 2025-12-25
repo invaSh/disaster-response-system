@@ -20,8 +20,8 @@ namespace IncidentService.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    IncidentId = table.Column<string>(type: "text", nullable: true),
-                    Title = table.Column<string>(type: "text", nullable: true),
+                    IncidentId = table.Column<string>(type: "text", nullable: false),
+                    Title = table.Column<string>(type: "text", nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
                     Type = table.Column<int>(type: "integer", nullable: false),
                     ReporterName = table.Column<string>(type: "text", nullable: true),
@@ -47,8 +47,8 @@ namespace IncidentService.Migrations
                 {
                     ID = table.Column<Guid>(type: "uuid", nullable: false),
                     IncidentId = table.Column<Guid>(type: "uuid", nullable: false),
-                    URL = table.Column<string>(type: "text", nullable: true),
-                    MediaType = table.Column<string>(type: "text", nullable: true)
+                    URL = table.Column<string>(type: "text", nullable: false),
+                    MediaType = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -67,7 +67,7 @@ namespace IncidentService.Migrations
                 {
                     ID = table.Column<Guid>(type: "uuid", nullable: false),
                     IncidentId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: true),
+                    Description = table.Column<string>(type: "text", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>

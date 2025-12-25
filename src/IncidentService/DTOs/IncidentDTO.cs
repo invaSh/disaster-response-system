@@ -1,9 +1,7 @@
 ﻿using IncidentService.Domain;
-using IncidentService.DTOs.MediaFile;
-using IncidentService.DTOs.Update;
 using IncidentService.Enums;
 
-namespace IncidentService.DTOs.Incidents
+namespace IncidentService.DTOs
 {
     public class IncidentDTO
     {

@@ -37,6 +37,7 @@ namespace IncidentService.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("IncidentId")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<double>("Latitude")
@@ -70,6 +71,7 @@ namespace IncidentService.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("Title")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<int>("Type")
@@ -93,9 +95,11 @@ namespace IncidentService.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("MediaType")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("URL")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("ID");
@@ -115,6 +119,7 @@ namespace IncidentService.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<Guid>("IncidentId")

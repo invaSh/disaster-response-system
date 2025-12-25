@@ -1,10 +1,8 @@
-﻿using AutoMapper;
-using IncidentService.Domain;
-using IncidentService.DTOs.Incidents;
-using IncidentService.Services;
+﻿using MediatR;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using IncidentService.Application.Incident;
+using IncidentService.DTOs;
 
 namespace IncidentService.Controllers
 {
@@ -12,54 +10,46 @@ namespace IncidentService.Controllers
     [ApiController]
     public class IncidentController : ControllerBase
     {
-        private readonly IncidentSvc _incidentService;
-        private readonly IMapper _mapper;
+        private readonly IMediator _mediator;
 
-        public IncidentController(IncidentSvc incidentService, IMapper mapper)
+        public IncidentController(IMediator mediator)
         {
-            _incidentService = incidentService;
-            _mapper = mapper;
+            _mediator = mediator;
         }
+
 
         [HttpGet]
-        public async Task<IActionResult> GetAllIncidents()
+        public async Task<List<IncidentDTO>> GetAll()
         {
-            var incidents = await _incidentService.GetAllIncidents();
-            return Ok(_mapper.Map<List<GetAllInvoicesDTO>>(incidents));
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> CreateIncident([FromBody] CreateIncidentDto createIncidentDto)
-        {
-            var incident = await _incidentService.CreateIncident(createIncidentDto);
-            var result = _mapper.Map<IncidentDTO>(incident);
-            return CreatedAtAction(nameof(GetIncidentById), new { id = incident.Id }, result);
+            return await _mediator.Send(new GetAll.Query());
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetIncidentById(Guid id)
+        public async Task<IncidentDTO> GetOne(Guid id)
         {
-            var incident = await _incidentService.GetIncidentById(id);
-            if (incident == null)
-            {
-                return NotFound();
-            }
-            return Ok(_mapper.Map<IncidentDTO>(incident));
+            return await _mediator.Send(new GetOne.Query { ID = id });
+        }
+
+        [HttpPost]
+        public async Task<IncidentDTO> Create([FromBody] Create.Command command)
+        {
+            return await _mediator.Send(command);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateIncidentById(Guid id, [FromBody] UpdateIncidentDTO updateIncidentDto)
+        public async Task<IActionResult> Update(Guid id, [FromBody] Update.Command command)
         {
-            var updatedIncident = await _incidentService.UpdateIncidentById(id, updateIncidentDto);
-            return Ok(_mapper.Map<IncidentDTO>(updatedIncident));
+            command.ID = id;
+            await _mediator.Send(command);
+            return Ok(new { message = "Incident updated successfully" });
         }
-        
+
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteIncident(Guid id)
+        public async Task<IActionResult> Delete(Guid id)
         {
-            var result = await _incidentService.DeleteIncident(id);
-            if (result == null) return BadRequest("Something went wrong.");
-            return Ok("Incident deleted successfully.");
+            await _mediator.Send(new Delete.Command { ID = id });
+            return Ok(new { message = "Incident deleted successfully" });
         }
+
     }
 }
