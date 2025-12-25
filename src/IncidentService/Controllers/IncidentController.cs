@@ -1,10 +1,8 @@
-﻿using AutoMapper;
-using IncidentService.Domain;
-using IncidentService.DTOs.Incidents;
-using IncidentService.Services;
+﻿using MediatR;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using IncidentService.Application.Incident;
+using IncidentService.DTOs.Incidents;
 
 namespace IncidentService.Controllers
 {
@@ -12,54 +10,19 @@ namespace IncidentService.Controllers
     [ApiController]
     public class IncidentController : ControllerBase
     {
-        private readonly IncidentSvc _incidentService;
-        private readonly IMapper _mapper;
+        private readonly IMediator _mediator;
 
-        public IncidentController(IncidentSvc incidentService, IMapper mapper)
+        public IncidentController(IMediator mediator)
         {
-            _incidentService = incidentService;
-            _mapper = mapper;
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetAllIncidents()
-        {
-            var incidents = await _incidentService.GetAllIncidents();
-            return Ok(_mapper.Map<List<GetAllInvoicesDTO>>(incidents));
+            _mediator = mediator;
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateIncident([FromBody] CreateIncidentDto createIncidentDto)
+        public async Task<IncidentDTO> CreateIncident([FromBody] Create.Command command)
         {
-            var incident = await _incidentService.CreateIncident(createIncidentDto);
-            var result = _mapper.Map<IncidentDTO>(incident);
-            return CreatedAtAction(nameof(GetIncidentById), new { id = incident.Id }, result);
+            return await _mediator.Send(command);
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetIncidentById(Guid id)
-        {
-            var incident = await _incidentService.GetIncidentById(id);
-            if (incident == null)
-            {
-                return NotFound();
-            }
-            return Ok(_mapper.Map<IncidentDTO>(incident));
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateIncidentById(Guid id, [FromBody] UpdateIncidentDTO updateIncidentDto)
-        {
-            var updatedIncident = await _incidentService.UpdateIncidentById(id, updateIncidentDto);
-            return Ok(_mapper.Map<IncidentDTO>(updatedIncident));
-        }
-        
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteIncident(Guid id)
-        {
-            var result = await _incidentService.DeleteIncident(id);
-            if (result == null) return BadRequest("Something went wrong.");
-            return Ok("Incident deleted successfully.");
-        }
+  
     }
 }

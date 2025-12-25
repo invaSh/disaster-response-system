@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using IncidentService.Domain;
 using IncidentService.DTOs.Incidents;
+using IncidentService.Application.Incident;
 
 namespace IncidentService.Helpers
 {
@@ -12,6 +13,7 @@ namespace IncidentService.Helpers
             CreateMap<CreateIncidentDto, Incident>();
             CreateMap<Incident, IncidentDTO>();
             CreateMap<UpdateIncidentDTO, Incident>();
+            CreateMap<Create.Command, Incident>();
         }
     }
 }

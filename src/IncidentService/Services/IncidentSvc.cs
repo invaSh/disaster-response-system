@@ -3,6 +3,7 @@ using IncidentService.Domain;
 using Microsoft.EntityFrameworkCore;
 using IncidentService.DTOs.Incidents;
 using AutoMapper;
+using IncidentService.Application.Incident;
 
 namespace IncidentService.Services
 {
@@ -25,7 +26,7 @@ namespace IncidentService.Services
              .ToListAsync();
         }
 
-        public async Task<Incident> CreateIncident(CreateIncidentDto createIncident)
+        public async Task<Incident> CreateIncident(Create.Command createIncident)
         {
             var incident = mapper.Map<Incident>(createIncident);
             incident.IncidentId = GenerateIncidentCode();

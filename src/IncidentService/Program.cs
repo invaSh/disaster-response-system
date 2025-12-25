@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using IncidentService.Services;
 using Microsoft.Extensions.DependencyInjection;
 using AutoMapper;
+using System.Reflection;
+using FluentValidation;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -15,7 +17,8 @@ builder.Services.AddDbContext<IncidentDbContext>(options =>
 builder.Services.AddScoped<IncidentSvc>();
 
 builder.Services.AddAutoMapper(typeof(Program));
-
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 
 var app = builder.Build();
 
