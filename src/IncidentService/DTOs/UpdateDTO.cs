@@ -1,4 +1,4 @@
-﻿namespace IncidentService.DTOs.Update
+﻿namespace IncidentService.DTOs
 {
     public class UpdateDTO
     {

@@ -9,23 +9,36 @@ using System.Net;
 
 namespace IncidentService.Application.Incident
 {
-    public class Create
+    public class Update
     {
-        public class Command : IRequest<IncidentDTO>
+        public class Command : IRequest<Unit>
         {
-            public string Title { get; set; }
-            public string Description { get; set; }
-            public string Type { get; set; }
+            public Guid ID { get; set; }
+            public string? IncidentId { get; set; }
+            public string? Title { get; set; }
+            public string? Description { get; set; }
+            public string? Type { get; set; }
 
-            public string ReporterName { get; set; }
-            public string ReporterContact { get; set; }
+            public string? ReporterName { get; set; }
+            public string? ReporterContact { get; set; }
 
-            public double Latitude { get; set; }
-            public double Longitude { get; set; }
+            public double? Latitude { get; set; }
+            public double? Longitude { get; set; }
 
-            public string Severity { get; set; }
+            public DateTime? ResolvedAt { get; set; }
+            public string? ResolutionNotes { get; set; }
+
+            public string? Status { get; set; }
+
+            public string? Severity { get; set; }
+
+            public List<Guid>? AssignedUnits { get; set; }
+
+            public List<UpdateDTO>? Updates { get; set; }
 
             public List<MediaFileDTO>? MediaFiles { get; set; }
+
+            public Dictionary<string, string>? Metadata { get; set; }
         }
 
         public class CommandValidator : AbstractValidator<Command>
@@ -40,7 +53,7 @@ namespace IncidentService.Application.Incident
 
                 RuleFor(x => x.Latitude).NotEmpty().WithMessage("Latitude is required");
 
-                RuleFor(x => x.Longitude).NotEmpty().WithMessage("Longitude is required");
+                RuleFor(x => x.Longitude).NotEmpty().WithMessage("Longitude is required.");
 
                 RuleFor(x => x.Type)
                     .Must(BeValidIncidentType).WithMessage("Invalid incident category")
@@ -57,7 +70,6 @@ namespace IncidentService.Application.Incident
                 RuleFor(x => x.ReporterContact)
                     .Must(x => x == null || !string.IsNullOrWhiteSpace(x))
                     .WithMessage("Reporter contact must be a valid string.");
-
             }
 
             private bool BeValidIncidentType(string type)
@@ -69,9 +81,14 @@ namespace IncidentService.Application.Incident
             {
                 return Enum.TryParse<Enums.Severity>(severity, true, out _);
             }
+
+            private bool BeValidStatus(string status)
+            {
+                return Enum.TryParse<Enums.Status>(status, true, out _);
+            }
         }
 
-        public class Handler : IRequestHandler<Command, IncidentDTO>
+        public class Handler : IRequestHandler<Command, Unit>
         {
             private readonly IncidentSvc _incidentService;
             private readonly IMapper _mapper;
@@ -84,18 +101,12 @@ namespace IncidentService.Application.Incident
                 _validator = validator;
             }
 
-            public async Task<IncidentDTO> Handle(Command request, CancellationToken cancellationToken)
+            public async Task<Unit> Handle(Command request, CancellationToken cancellationToken)
             {
                 var validationResult = await _validator.ValidateAsync(request, cancellationToken);
                 if (!validationResult.IsValid)
                 {
-                    var errors = validationResult.Errors
-                        .GroupBy(e => e.PropertyName)
-                        .ToDictionary(
-                            g => g.Key,
-                            g => g.Select(e => e.ErrorMessage).ToArray()
-                        );
-
+                    var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToArray();
                     throw new StatusException(
                         HttpStatusCode.BadRequest,
                         "ValidationError",
@@ -104,9 +115,9 @@ namespace IncidentService.Application.Incident
                     );
                 }
 
-                var incident = await _incidentService.CreateIncident(request);
+                await _incidentService.UpdateIncidentById(request.ID, request);
 
-                return _mapper.Map<IncidentDTO>(incident);
+                return Unit.Value;
             }
         }
     }

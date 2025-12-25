@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using IncidentService.Application.Incident;
-using IncidentService.DTOs.Incidents;
+using IncidentService.DTOs;
 
 namespace IncidentService.Controllers
 {
@@ -30,8 +30,13 @@ namespace IncidentService.Controllers
             return await _mediator.Send(command);
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateIncident(Guid id, [FromBody] Update.Command command)
+        {
+            command.ID = id;
+            await _mediator.Send(command);
+            return Ok(new { message = "Incident updated successfully" });
+        }
 
-
-  
     }
 }

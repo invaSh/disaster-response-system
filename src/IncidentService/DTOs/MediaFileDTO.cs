@@ -1,4 +1,4 @@
-﻿namespace IncidentService.DTOs.MediaFile
+﻿namespace IncidentService.DTOs
 {
     public class MediaFileDTO
     {

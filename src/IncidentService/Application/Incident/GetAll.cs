@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
-using IncidentService.DTOs.Incidents;
 using MediatR;
 using IncidentService.Services;
+using IncidentService.DTOs;
 
 namespace IncidentService.Application.Incident
 {

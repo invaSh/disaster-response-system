@@ -1,9 +1,11 @@
 ﻿using IncidentService.Persistance;
 using IncidentService.Domain;
 using Microsoft.EntityFrameworkCore;
-using IncidentService.DTOs.Incidents;
+using IncidentService.DTOs;
 using AutoMapper;
 using IncidentService.Application.Incident;
+using System.Net;
+using IncidentService.Helpers;
 
 namespace IncidentService.Services
 {
@@ -21,35 +23,59 @@ namespace IncidentService.Services
         public async Task<List<Incident>> GetAllIncidents()
         {
             return await _context.Incidents
-             .AsNoTracking()    
+             .AsNoTracking()
              .OrderByDescending(i => i.ReportedAt)
              .ToListAsync();
         }
 
         public async Task<Incident> CreateIncident(Create.Command createIncident)
         {
-            var incident = mapper.Map<Incident>(createIncident);
-            incident.IncidentId = GenerateIncidentCode();
-            _context.Incidents.Add(incident);
-            await _context.SaveChangesAsync();
+            try
+            {
+                var incident = mapper.Map<Incident>(createIncident);
+                incident.IncidentId = HelperService.GenerateIncidentCode();
+
+                _context.Incidents.Add(incident);
+                await _context.SaveChangesAsync();
+
+                return incident;
+            }
+            catch (Exception ex)
+            {
+                throw HelperService.MapToStatusException(ex);
+            }
+        }
+
+
+        public async Task<Incident> GetIncidentById(Guid id)
+        {
+            var incident = await _context.Incidents.FirstOrDefaultAsync(i => i.Id == id);
+            if (incident == null)
+            {
+                throw new StatusException(
+                    HttpStatusCode.NotFound,
+                    "NotFound",
+                    "Incident not found",
+                    ""
+                );
+            }
             return incident;
         }
 
-        public async Task<Incident?> GetIncidentById(Guid id)
-        {
-            return await _context.Incidents
-                .AsNoTracking()
-                .FirstOrDefaultAsync(i => i.Id == id);
-        }
 
-        public async Task<Incident> UpdateIncidentById(Guid id, UpdateIncidentDTO updateIncident)
+        public async Task<Incident> UpdateIncidentById(Guid id, Application.Incident.Update.Command updateIncident)
         {
-            var incident = await _context.Incidents
-                .FirstOrDefaultAsync(i => i.Id == id);
-            if (incident == null) throw new KeyNotFoundException("Incident not found");
-            mapper.Map(updateIncident, incident);
-            await _context.SaveChangesAsync();
-            return incident;
+            var incident = await GetIncidentById(id);
+            try
+            {
+                mapper.Map(updateIncident, incident);
+                await _context.SaveChangesAsync();
+                return incident;
+            }
+            catch (Exception ex)
+            {
+                throw HelperService.MapToStatusException(ex);
+            }
         }
 
         public async Task<Incident> DeleteIncident(Guid id)
@@ -61,13 +87,5 @@ namespace IncidentService.Services
             await _context.SaveChangesAsync();
             return incident;
         }
-
-
-        private static string GenerateIncidentCode()
-        {
-            var suffix = Guid.NewGuid().ToString("N")[..4].ToUpper();
-            return $"INC-{suffix}";
-        }
-
     }
 }

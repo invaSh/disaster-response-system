@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using IncidentService.Domain;
-using IncidentService.DTOs.Incidents;
 using IncidentService.Application.Incident;
+using IncidentService.DTOs;
 
 namespace IncidentService.Helpers
 {
@@ -9,11 +9,9 @@ namespace IncidentService.Helpers
     {
         public MappingProfiles()
         {
-            CreateMap<Incident, GetAllInvoicesDTO>();
-            CreateMap<CreateIncidentDto, Incident>();
             CreateMap<Incident, IncidentDTO>();
-            CreateMap<UpdateIncidentDTO, Incident>();
             CreateMap<Create.Command, Incident>();
+            CreateMap<Application.Incident.Update.Command, Incident>();
         }
     }
 }
