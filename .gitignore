@@ -16,3 +16,5 @@ src/*/appsettings.*.json
 .idea/
 
 packages/
+/NotificationService/appsettings.json
+/NotificationService/appsettings.Development.json
