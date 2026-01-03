@@ -5,6 +5,6 @@ namespace DispatchService.DTOs.DispatchOrders
     public class UpdateDispatchOrderRequestDTO
     {
         public string? Notes { get; set; }
-        public DateTime? CompletedAt { get; set; }
+        // public DateTime? CompletedAt { get; set; } - vendoset vetem kur statusi behet completed.
     }
 }
