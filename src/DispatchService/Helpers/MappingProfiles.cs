@@ -14,16 +14,14 @@ namespace DispatchService.Helpers
             CreateMap<Unit, UnitListItemDTO>();
             CreateMap<Unit, UnitDetailsDTO>();
 
-            // Request DTOs -> Entity
             CreateMap<CreateUnitRequestDTO, Unit>()
-                // kto zakonisht vendosen nga business layer e jo nga clienti
                 .ForMember(d => d.Id, opt => opt.Ignore())
                 .ForMember(d => d.Status, opt => opt.Ignore())
                 .ForMember(d => d.DispatchAssignments, opt => opt.Ignore());
 
             CreateMap<UpdateUnitRequestDTO, Unit>()
                 .ForMember(d => d.Id, opt => opt.Ignore())
-                .ForMember(d => d.Code, opt => opt.Ignore())  // se lojme me na u ndrru nga update
+                .ForMember(d => d.Code, opt => opt.Ignore()) 
                 .ForMember(d => d.Type, opt => opt.Ignore())
                 .ForMember(d => d.DispatchAssignments, opt => opt.Ignore());
 
@@ -33,7 +31,6 @@ namespace DispatchService.Helpers
 
             CreateMap<DispatchOrder, DispatchOrderDetailsDTO>();
 
-            // Request DTOs -> Entity
             CreateMap<CreateDispatchOrderRequestDTO, DispatchOrder>()
                 .ForMember(d => d.Id, opt => opt.Ignore())
                 .ForMember(d => d.Status, opt => opt.Ignore())
@@ -52,10 +49,9 @@ namespace DispatchService.Helpers
             CreateMap<DispatchAssignment, DispatchAssignmentDTO>()
                 .ForMember(d => d.UnitCode, opt => opt.MapFrom(s => s.Unit.Code));
 
-            // Request DTOs -> Entity
             CreateMap<CreateDispatchAssignmentRequestDTO, DispatchAssignment>()
                 .ForMember(d => d.Id, opt => opt.Ignore())
-                .ForMember(d => d.DispatchOrderId, opt => opt.Ignore()) // vjen nga route/handler
+                .ForMember(d => d.DispatchOrderId, opt => opt.Ignore()) 
                 .ForMember(d => d.AssignedAt, opt => opt.Ignore())
                 .ForMember(d => d.Status, opt => opt.Ignore())
                 .ForMember(d => d.Unit, opt => opt.Ignore())

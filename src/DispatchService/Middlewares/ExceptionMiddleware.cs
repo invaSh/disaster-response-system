@@ -22,6 +22,12 @@ namespace DispatchService.Middlewares
             }
             catch (StatusException ex)
             {
+                _logger.LogWarning(
+                    "Handled exception: {ErrorType} - {Message}",
+                    ex.ErrorType,
+                    ex.Message
+                );
+
                 context.Response.ContentType = "application/json";
                 context.Response.StatusCode = (int)ex.StatusCode;
 
@@ -30,15 +36,14 @@ namespace DispatchService.Middlewares
                     StatusCode = context.Response.StatusCode,
                     ErrorType = ex.ErrorType,
                     Message = ex.Message,
-                    Errors = ex.Errors,
-                    Error = ex.Error
+                    Errors = ex.Errors
                 };
 
                 await context.Response.WriteAsJsonAsync(response);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception");
+                _logger.LogError(ex, "Unhandled exception occurred");
 
                 context.Response.ContentType = "application/json";
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
@@ -46,10 +51,9 @@ namespace DispatchService.Middlewares
                 var response = new
                 {
                     StatusCode = context.Response.StatusCode,
-                    ErrorType = "ServerError",
-                    Message = ex.Message,
-                    Errors = (object?)null,
-                    Error = ex.StackTrace
+                    ErrorType = "InternalServerError",
+                    Message = "An unexpected error occurred. Please try again later.",
+                    Errors = (object?)null
                 };
 
                 await context.Response.WriteAsJsonAsync(response);
