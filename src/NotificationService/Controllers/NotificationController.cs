@@ -38,11 +38,10 @@ namespace NotificationService.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] Update.Command command)
+        public async Task<NotificationDTO> Update(Guid id, [FromBody] Update.Command command)
         {
-            command.ID = id;
-            await _mediator.Send(command);
-            return Ok(new { message = "Notification updated successfully" });
+            command.Id = id;
+            return await _mediator.Send(command);
         }
 
 

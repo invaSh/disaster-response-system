@@ -12,6 +12,8 @@ namespace NotificationService.Helpers
         {
             CreateMap<Notification, NotificationDTO>();
             CreateMap<Create.Command, NotificationService.Domain.Notification>();
+            CreateMap<Update.Command, NotificationService.Domain.Notification>().ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
         }
     }
 }
