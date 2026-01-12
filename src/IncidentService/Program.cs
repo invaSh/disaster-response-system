@@ -1,6 +1,7 @@
 using IncidentService.Persistance;
 using Microsoft.EntityFrameworkCore;
 using IncidentService.Services;
+using IncidentService.Messaging.Publishers;
 using Microsoft.Extensions.DependencyInjection;
 using AutoMapper;
 using System.Reflection;

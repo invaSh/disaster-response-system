@@ -48,7 +48,7 @@ public class IncidentEventConsumer : BackgroundService
 
                 var response = await _sqsClient.ReceiveMessageAsync(receiveRequest, stoppingToken);
 
-                if (response.Messages.Any())
+                if (response.Messages != null && response.Messages.Any())
                 {
                     _logger.LogInformation("Received {Count} messages from queue", response.Messages.Count);
 
