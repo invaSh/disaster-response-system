@@ -4,6 +4,7 @@ using IncidentService.DTOs;
 using IncidentService.Enums;
 using IncidentService.Middlewares;
 using IncidentService.Services;
+using IncidentService.Messaging.Publishers;
 using MediatR;
 using System.Net;
 
@@ -76,12 +77,18 @@ namespace IncidentService.Application.Incident
             private readonly IncidentSvc _incidentService;
             private readonly IMapper _mapper;
             private readonly IValidator<Command> _validator;
+            private readonly IIncidentEventPublisher _eventPublisher;
 
-            public Handler(IncidentSvc incidentService, IMapper mapper, IValidator<Command> validator)
+            public Handler(
+                IncidentSvc incidentService, 
+                IMapper mapper, 
+                IValidator<Command> validator,
+                IIncidentEventPublisher eventPublisher)
             {
                 _incidentService = incidentService;
                 _mapper = mapper;
                 _validator = validator;
+                _eventPublisher = eventPublisher;
             }
 
             public async Task<IncidentDTO> Handle(Command request, CancellationToken cancellationToken)
@@ -105,8 +112,12 @@ namespace IncidentService.Application.Incident
                 }
 
                 var incident = await _incidentService.CreateIncident(request);
+                var incidentDto = _mapper.Map<IncidentDTO>(incident);
 
-                return _mapper.Map<IncidentDTO>(incident);
+                // Publish event asynchronously (fire and forget)
+                _ = Task.Run(async () => await _eventPublisher.PublishIncidentCreatedAsync(incidentDto), cancellationToken);
+
+                return incidentDto;
             }
         }
     }
