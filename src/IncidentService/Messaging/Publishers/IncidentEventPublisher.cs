@@ -8,6 +8,7 @@ namespace IncidentService.Messaging.Publishers;
 public interface IIncidentEventPublisher
 {
     Task PublishIncidentCreatedAsync(IncidentDTO incident);
+    Task PublishIncidentUpdatedAsync(IncidentDTO incident);
 }
 
 public class IncidentEventPublisher : IIncidentEventPublisher
@@ -86,4 +87,63 @@ public class IncidentEventPublisher : IIncidentEventPublisher
             // Don't throw - we don't want to fail incident creation if event publishing fails
         }
     }
+
+    public async Task PublishIncidentUpdatedAsync(IncidentDTO incident)
+    {
+        try
+        {
+            var topicName = _configuration["AWS:SNS:IncidentUpdatedTopic"] ?? "incident-updated-topic";
+            
+            var topicsResponse = await _snsClient.ListTopicsAsync();
+            var topicArn = topicsResponse.Topics
+                .FirstOrDefault(t => t.TopicArn.Contains(topicName))?.TopicArn;
+
+            if (topicArn == null)
+            {
+                _logger.LogWarning("SNS topic '{TopicName}' not found. Attempting to create it.", topicName);
+                var createTopicResponse = await _snsClient.CreateTopicAsync(new CreateTopicRequest
+                {
+                    Name = topicName
+                });
+                topicArn = createTopicResponse.TopicArn;
+            }
+
+            var eventMessage = new
+            {
+                EventType = "IncidentUpdated",
+                Timestamp = DateTime.UtcNow,
+                Data = incident
+            };
+
+            var messageBody = JsonSerializer.Serialize(eventMessage, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            var publishRequest = new PublishRequest
+            {
+                TopicArn = topicArn,
+                Message = messageBody,
+                MessageAttributes = new Dictionary<string, MessageAttributeValue>
+                {
+                    {
+                        "EventType",
+                        new MessageAttributeValue
+                        {
+                            DataType = "String",
+                            StringValue = "IncidentUpdated"
+                        }
+                    }
+                }
+            };
+
+            await _snsClient.PublishAsync(publishRequest);
+            _logger.LogInformation("Published IncidentUpdated event for incident {IncidentId}", incident.ID);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish IncidentUpdated event for incident {IncidentId}", incident.ID);
+        }
+    }
+
 }

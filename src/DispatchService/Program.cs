@@ -39,6 +39,7 @@ builder.Services.AddScoped<DispatchSvc>();
 
 // Background Services
 builder.Services.AddHostedService<IncidentEventConsumer>();
+builder.Services.AddHostedService<IncidentUpdatedConsumer>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));

@@ -28,6 +28,7 @@ builder.Services.AddLocalStackAws(builder.Configuration);
 
 // Background Services
 builder.Services.AddHostedService<IncidentEventConsumer>();
+builder.Services.AddHostedService<IncidentUpdatedConsumer>();
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 

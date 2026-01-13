@@ -137,8 +137,6 @@ public class IncidentEventConsumer : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing message. Message will be retried or moved to DLQ.");
-            // Don't delete the message so it can be retried
-            // In production, you might want to implement retry logic and DLQ handling
         }
     }
 
