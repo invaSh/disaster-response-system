@@ -2,9 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using NotificationService.Persistance;
 using MediatR;
 using NotificationService.Services;
+using NotificationService.Messaging.Consumers;
 using AutoMapper;
 using FluentValidation;
 using System.Reflection;
+using Shared.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +22,13 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<NotificationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("NotificationDatabase"))
 );
+
+// AWS Services (LocalStack)
+builder.Services.AddLocalStackAws(builder.Configuration);
+
+// Background Services
+builder.Services.AddHostedService<IncidentEventConsumer>();
+builder.Services.AddHostedService<IncidentUpdatedConsumer>();
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 

@@ -1,11 +1,13 @@
 using DispatchService.Persistance;
 using DispatchService.Services;
+using DispatchService.Messaging.Consumers;
 using DispatchService.Middlewares;
 using Microsoft.EntityFrameworkCore;
 using AutoMapper;
 using System.Reflection;
 using FluentValidation;
 using MediatR;
+using Shared.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,8 +31,15 @@ builder.Services.AddDbContext<DispatchDbContext>(options =>
     )
 );
 
+// AWS Services (LocalStack)
+builder.Services.AddLocalStackAws(builder.Configuration);
+
 // Services
 builder.Services.AddScoped<DispatchSvc>();
+
+// Background Services
+builder.Services.AddHostedService<IncidentEventConsumer>();
+builder.Services.AddHostedService<IncidentUpdatedConsumer>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
