@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using IncidentService.DTOs;
 using IncidentService.Enums;
@@ -117,7 +117,7 @@ namespace IncidentService.Application.Incident
 
                 if (request.MediaFiles != null && request.MediaFiles.Any())
                 {
-                    ValidateMediaFiles(request.MediaFiles);
+                    _incidentService.ValidateMediaFiles(request.MediaFiles);
                 }
 
                 var incident = await _incidentService.CreateIncident(request, _s3Service, cancellationToken);
@@ -126,48 +126,6 @@ namespace IncidentService.Application.Incident
                 _ = Task.Run(async () => await _eventPublisher.PublishIncidentCreatedAsync(incidentDto), cancellationToken);
 
                 return incidentDto;
-            }
-
-            private void ValidateMediaFiles(List<IFormFile> mediaFiles)
-            {
-                var allowedImageTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
-                var allowedVideoTypes = new[] { "video/mp4", "video/mpeg", "video/quicktime", "video/x-msvideo", "video/webm" };
-                var allowedTypes = allowedImageTypes.Concat(allowedVideoTypes).ToArray();
-
-                var maxFileSize = 50 * 1024 * 1024; // 50 MB
-
-                foreach (var file in mediaFiles)
-                {
-                    if (file == null || file.Length == 0)
-                    {
-                        throw new StatusException(
-                            HttpStatusCode.BadRequest,
-                            "ValidationError",
-                            "Media file cannot be empty",
-                            new Dictionary<string, string[]> { { "MediaFiles", new[] { "One or more media files are empty" } } }
-                        );
-                    }
-
-                    if (file.Length > maxFileSize)
-                    {
-                        throw new StatusException(
-                            HttpStatusCode.BadRequest,
-                            "ValidationError",
-                            "File size exceeds maximum allowed size",
-                            new Dictionary<string, string[]> { { "MediaFiles", new[] { $"File {file.FileName} exceeds maximum size of 50MB" } } }
-                        );
-                    }
-
-                    if (!allowedTypes.Contains(file.ContentType.ToLower()))
-                    {
-                        throw new StatusException(
-                            HttpStatusCode.BadRequest,
-                            "ValidationError",
-                            "Invalid file type",
-                            new Dictionary<string, string[]> { { "MediaFiles", new[] { $"File {file.FileName} has an unsupported type. Allowed types: images (JPEG, PNG, GIF, WebP) and videos (MP4, MPEG, MOV, AVI, WebM)" } } }
-                        );
-                    }
-                }
             }
         }
     }

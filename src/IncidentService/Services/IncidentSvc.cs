@@ -24,6 +24,7 @@ namespace IncidentService.Services
         public async Task<List<Incident>> GetAllIncidents()
         {
             return await _context.Incidents
+             .Include(i => i.MediaFiles)
              .AsNoTracking()
              .OrderByDescending(i => i.ReportedAt)
              .ToListAsync();
@@ -31,7 +32,9 @@ namespace IncidentService.Services
 
         public async Task<Incident> GetIncidentById(Guid id)
         {
-            var incident = await _context.Incidents.FirstOrDefaultAsync(i => i.Id == id);
+            var incident = await _context.Incidents
+                .Include(i => i.MediaFiles)
+                .FirstOrDefaultAsync(i => i.Id == id);
             if (incident == null)
             {
                 throw new StatusException(
@@ -95,14 +98,58 @@ namespace IncidentService.Services
             }
         }
 
-        public async Task<Incident> UpdateIncidentById(Guid id, Application.Incident.Update.Command updateIncident)
+        public async Task<Incident> UpdateIncidentById(Guid id, Application.Incident.Update.Command updateIncident, IS3Service s3Service, CancellationToken cancellationToken = default)
         {
             try
             {
-                var incident = await GetIncidentById(id);
+                var incident = await _context.Incidents
+                    .Include(i => i.MediaFiles)
+                    .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
+
+                if (incident == null)
+                {
+                    throw new StatusException(
+                        HttpStatusCode.NotFound,
+                        "NotFound",
+                        "Incident not found",
+                        ""
+                    );
+                }
+
                 mapper.Map(updateIncident, incident);
-                await _context.SaveChangesAsync();
-                return incident;
+                await _context.SaveChangesAsync(cancellationToken);
+
+                if (updateIncident.MediaFiles != null && updateIncident.MediaFiles.Any())
+                {
+                    foreach (var file in updateIncident.MediaFiles)
+                    {
+                        using var fileStream = file.OpenReadStream();
+                        var s3Url = await s3Service.UploadFileAsync(
+                            fileStream,
+                            file.FileName,
+                            file.ContentType,
+                            cancellationToken
+                        );
+
+                        var mediaFile = new MediaFile
+                        {
+                            ID = Guid.NewGuid(),
+                            IncidentId = incident.Id,
+                            URL = s3Url,
+                            MediaType = file.ContentType
+                        };
+
+                        _context.MediaFiles.Add(mediaFile);
+                    }
+
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+
+                var incidentWithMedia = await _context.Incidents
+                    .Include(i => i.MediaFiles)
+                    .FirstOrDefaultAsync(i => i.Id == incident.Id, cancellationToken);
+
+                return incidentWithMedia ?? incident;
             }
             catch (Exception ex)
             {
@@ -122,6 +169,48 @@ namespace IncidentService.Services
             catch (Exception ex)
             {
                 throw HelperService.MapToStatusException(ex);
+            }
+        }
+
+        public void ValidateMediaFiles(List<IFormFile> mediaFiles)
+        {
+            var allowedImageTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+            var allowedVideoTypes = new[] { "video/mp4", "video/mpeg", "video/quicktime", "video/x-msvideo", "video/webm" };
+            var allowedTypes = allowedImageTypes.Concat(allowedVideoTypes).ToArray();
+
+            var maxFileSize = 50 * 1024 * 1024; // 50 MB
+
+            foreach (var file in mediaFiles)
+            {
+                if (file == null || file.Length == 0)
+                {
+                    throw new StatusException(
+                        HttpStatusCode.BadRequest,
+                        "ValidationError",
+                        "Media file cannot be empty",
+                        new Dictionary<string, string[]> { { "MediaFiles", new[] { "One or more media files are empty" } } }
+                    );
+                }
+
+                if (file.Length > maxFileSize)
+                {
+                    throw new StatusException(
+                        HttpStatusCode.BadRequest,
+                        "ValidationError",
+                        "File size exceeds maximum allowed size",
+                        new Dictionary<string, string[]> { { "MediaFiles", new[] { $"File {file.FileName} exceeds maximum size of 50MB" } } }
+                    );
+                }
+
+                if (!allowedTypes.Contains(file.ContentType.ToLower()))
+                {
+                    throw new StatusException(
+                        HttpStatusCode.BadRequest,
+                        "ValidationError",
+                        "Invalid file type",
+                        new Dictionary<string, string[]> { { "MediaFiles", new[] { $"File {file.FileName} has an unsupported type. Allowed types: images (JPEG, PNG, GIF, WebP) and videos (MP4, MPEG, MOV, AVI, WebM)" } } }
+                    );
+                }
             }
         }
     }

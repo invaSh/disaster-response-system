@@ -38,7 +38,8 @@ namespace IncidentService.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] Update.Command command)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> Update(Guid id, [FromForm] Update.Command command)
         {
             command.ID = id;
             await _mediator.Send(command);

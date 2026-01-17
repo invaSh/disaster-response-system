@@ -1,4 +1,4 @@
-﻿using IncidentService.Domain;
+using IncidentService.Domain;
 using IncidentService.Enums;
 
 namespace IncidentService.DTOs
