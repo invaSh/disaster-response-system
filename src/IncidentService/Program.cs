@@ -28,6 +28,9 @@ builder.Services.AddScoped<IncidentSvc>();
 // AWS Services (LocalStack)
 builder.Services.AddLocalStackAws(builder.Configuration);
 
+// S3 Service
+builder.Services.AddScoped<IS3Service, S3Service>();
+
 // Event Publisher
 builder.Services.AddScoped<IIncidentEventPublisher, IncidentEventPublisher>();
 

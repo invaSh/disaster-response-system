@@ -1,4 +1,4 @@
-﻿using IncidentService.Persistance;
+using IncidentService.Persistance;
 using IncidentService.Domain;
 using Microsoft.EntityFrameworkCore;
 using IncidentService.DTOs;
@@ -6,6 +6,7 @@ using AutoMapper;
 using IncidentService.Application.Incident;
 using System.Net;
 using IncidentService.Helpers;
+using Microsoft.AspNetCore.Http;
 
 namespace IncidentService.Services
 {
@@ -43,7 +44,7 @@ namespace IncidentService.Services
             return incident;
         }
 
-        public async Task<Incident> CreateIncident(Create.Command createIncident)
+        public async Task<Incident> CreateIncident(Create.Command createIncident, IS3Service s3Service, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -51,9 +52,42 @@ namespace IncidentService.Services
                 incident.IncidentId = HelperService.GenerateIncidentCode();
 
                 _context.Incidents.Add(incident);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
 
-                return incident;
+                if (createIncident.MediaFiles != null && createIncident.MediaFiles.Any())
+                {
+                    var mediaFiles = new List<MediaFile>();
+
+                    foreach (var file in createIncident.MediaFiles)
+                    {
+                        using var fileStream = file.OpenReadStream();
+                        var s3Url = await s3Service.UploadFileAsync(
+                            fileStream,
+                            file.FileName,
+                            file.ContentType,
+                            cancellationToken
+                        );
+
+                        var mediaFile = new MediaFile
+                        {
+                            ID = Guid.NewGuid(),
+                            IncidentId = incident.Id,
+                            URL = s3Url,
+                            MediaType = file.ContentType
+                        };
+
+                        mediaFiles.Add(mediaFile);
+                        _context.MediaFiles.Add(mediaFile);
+                    }
+
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+
+                var incidentWithMedia = await _context.Incidents
+                    .Include(i => i.MediaFiles)
+                    .FirstOrDefaultAsync(i => i.Id == incident.Id, cancellationToken);
+
+                return incidentWithMedia ?? incident;
             }
             catch (Exception ex)
             {

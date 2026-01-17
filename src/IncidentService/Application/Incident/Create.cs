@@ -7,6 +7,7 @@ using IncidentService.Services;
 using IncidentService.Messaging.Publishers;
 using MediatR;
 using System.Net;
+using Microsoft.AspNetCore.Http;
 
 namespace IncidentService.Application.Incident
 {
@@ -18,15 +19,15 @@ namespace IncidentService.Application.Incident
             public string Description { get; set; }
             public string Type { get; set; }
 
-            public string ReporterName { get; set; }
-            public string ReporterContact { get; set; }
+            public string? ReporterName { get; set; }
+            public string? ReporterContact { get; set; }
 
             public double Latitude { get; set; }
             public double Longitude { get; set; }
 
             public string Severity { get; set; }
 
-            public List<MediaFileDTO>? MediaFiles { get; set; }
+            public List<IFormFile>? MediaFiles { get; set; }
         }
 
         public class CommandValidator : AbstractValidator<Command>
@@ -78,17 +79,20 @@ namespace IncidentService.Application.Incident
             private readonly IMapper _mapper;
             private readonly IValidator<Command> _validator;
             private readonly IIncidentEventPublisher _eventPublisher;
+            private readonly IS3Service _s3Service;
 
             public Handler(
                 IncidentSvc incidentService, 
                 IMapper mapper, 
                 IValidator<Command> validator,
-                IIncidentEventPublisher eventPublisher)
+                IIncidentEventPublisher eventPublisher,
+                IS3Service s3Service)
             {
                 _incidentService = incidentService;
                 _mapper = mapper;
                 _validator = validator;
                 _eventPublisher = eventPublisher;
+                _s3Service = s3Service;
             }
 
             public async Task<IncidentDTO> Handle(Command request, CancellationToken cancellationToken)
@@ -111,13 +115,59 @@ namespace IncidentService.Application.Incident
                     );
                 }
 
-                var incident = await _incidentService.CreateIncident(request);
+                if (request.MediaFiles != null && request.MediaFiles.Any())
+                {
+                    ValidateMediaFiles(request.MediaFiles);
+                }
+
+                var incident = await _incidentService.CreateIncident(request, _s3Service, cancellationToken);
                 var incidentDto = _mapper.Map<IncidentDTO>(incident);
 
-                // Publish event asynchronously (fire and forget)
                 _ = Task.Run(async () => await _eventPublisher.PublishIncidentCreatedAsync(incidentDto), cancellationToken);
 
                 return incidentDto;
+            }
+
+            private void ValidateMediaFiles(List<IFormFile> mediaFiles)
+            {
+                var allowedImageTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+                var allowedVideoTypes = new[] { "video/mp4", "video/mpeg", "video/quicktime", "video/x-msvideo", "video/webm" };
+                var allowedTypes = allowedImageTypes.Concat(allowedVideoTypes).ToArray();
+
+                var maxFileSize = 50 * 1024 * 1024; // 50 MB
+
+                foreach (var file in mediaFiles)
+                {
+                    if (file == null || file.Length == 0)
+                    {
+                        throw new StatusException(
+                            HttpStatusCode.BadRequest,
+                            "ValidationError",
+                            "Media file cannot be empty",
+                            new Dictionary<string, string[]> { { "MediaFiles", new[] { "One or more media files are empty" } } }
+                        );
+                    }
+
+                    if (file.Length > maxFileSize)
+                    {
+                        throw new StatusException(
+                            HttpStatusCode.BadRequest,
+                            "ValidationError",
+                            "File size exceeds maximum allowed size",
+                            new Dictionary<string, string[]> { { "MediaFiles", new[] { $"File {file.FileName} exceeds maximum size of 50MB" } } }
+                        );
+                    }
+
+                    if (!allowedTypes.Contains(file.ContentType.ToLower()))
+                    {
+                        throw new StatusException(
+                            HttpStatusCode.BadRequest,
+                            "ValidationError",
+                            "Invalid file type",
+                            new Dictionary<string, string[]> { { "MediaFiles", new[] { $"File {file.FileName} has an unsupported type. Allowed types: images (JPEG, PNG, GIF, WebP) and videos (MP4, MPEG, MOV, AVI, WebM)" } } }
+                        );
+                    }
+                }
             }
         }
     }

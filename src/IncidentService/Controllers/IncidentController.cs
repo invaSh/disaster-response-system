@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using IncidentService.Application.Incident;
@@ -31,7 +31,8 @@ namespace IncidentService.Controllers
         }
 
         [HttpPost]
-        public async Task<IncidentDTO> Create([FromBody] Create.Command command)
+        [Consumes("multipart/form-data")]
+        public async Task<IncidentDTO> Create([FromForm] Create.Command command)
         {
             return await _mediator.Send(command);
         }
