@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using IncidentService.DTOs;
 using IncidentService.Enums;
@@ -7,6 +7,7 @@ using IncidentService.Services;
 using IncidentService.Messaging.Publishers;
 using MediatR;
 using System.Net;
+using Microsoft.AspNetCore.Http;
 
 namespace IncidentService.Application.Incident
 {
@@ -18,15 +19,15 @@ namespace IncidentService.Application.Incident
             public string Description { get; set; }
             public string Type { get; set; }
 
-            public string ReporterName { get; set; }
-            public string ReporterContact { get; set; }
+            public string? ReporterName { get; set; }
+            public string? ReporterContact { get; set; }
 
             public double Latitude { get; set; }
             public double Longitude { get; set; }
 
             public string Severity { get; set; }
 
-            public List<MediaFileDTO>? MediaFiles { get; set; }
+            public List<IFormFile>? MediaFiles { get; set; }
         }
 
         public class CommandValidator : AbstractValidator<Command>
@@ -78,17 +79,20 @@ namespace IncidentService.Application.Incident
             private readonly IMapper _mapper;
             private readonly IValidator<Command> _validator;
             private readonly IIncidentEventPublisher _eventPublisher;
+            private readonly IS3Service _s3Service;
 
             public Handler(
                 IncidentSvc incidentService, 
                 IMapper mapper, 
                 IValidator<Command> validator,
-                IIncidentEventPublisher eventPublisher)
+                IIncidentEventPublisher eventPublisher,
+                IS3Service s3Service)
             {
                 _incidentService = incidentService;
                 _mapper = mapper;
                 _validator = validator;
                 _eventPublisher = eventPublisher;
+                _s3Service = s3Service;
             }
 
             public async Task<IncidentDTO> Handle(Command request, CancellationToken cancellationToken)
@@ -111,10 +115,14 @@ namespace IncidentService.Application.Incident
                     );
                 }
 
-                var incident = await _incidentService.CreateIncident(request);
+                if (request.MediaFiles != null && request.MediaFiles.Any())
+                {
+                    _incidentService.ValidateMediaFiles(request.MediaFiles);
+                }
+
+                var incident = await _incidentService.CreateIncident(request, _s3Service, cancellationToken);
                 var incidentDto = _mapper.Map<IncidentDTO>(incident);
 
-                // Publish event asynchronously (fire and forget)
                 _ = Task.Run(async () => await _eventPublisher.PublishIncidentCreatedAsync(incidentDto), cancellationToken);
 
                 return incidentDto;

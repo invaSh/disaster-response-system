@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using IncidentService.DTOs;
 using IncidentService.Enums;
@@ -7,6 +7,7 @@ using IncidentService.Services;
 using IncidentService.Messaging.Publishers;
 using MediatR;
 using System.Net;
+using Microsoft.AspNetCore.Http;
 
 namespace IncidentService.Application.Incident
 {
@@ -15,7 +16,6 @@ namespace IncidentService.Application.Incident
         public class Command : IRequest<Unit>
         {
             public Guid ID { get; set; }
-            public string? IncidentId { get; set; }
             public string? Title { get; set; }
             public string? Description { get; set; }
             public string? Type { get; set; }
@@ -37,7 +37,7 @@ namespace IncidentService.Application.Incident
 
             public List<UpdateDTO>? Updates { get; set; }
 
-            public List<MediaFileDTO>? MediaFiles { get; set; }
+            public List<IFormFile>? MediaFiles { get; set; }
 
             public Dictionary<string, string>? Metadata { get; set; }
         }
@@ -95,17 +95,20 @@ namespace IncidentService.Application.Incident
             private readonly IMapper _mapper;
             private readonly IValidator<Command> _validator;
             private readonly IIncidentEventPublisher _eventPublisher;
+            private readonly IS3Service _s3Service;
 
             public Handler(
                 IncidentSvc incidentService, 
                 IMapper mapper, 
                 IValidator<Command> validator,
-                IIncidentEventPublisher eventPublisher)
+                IIncidentEventPublisher eventPublisher,
+                IS3Service s3Service)
             {
                 _incidentService = incidentService;
                 _mapper = mapper;
                 _validator = validator;
                 _eventPublisher = eventPublisher;
+                _s3Service = s3Service;
             }
 
             public async Task<Unit> Handle(Command request, CancellationToken cancellationToken)
@@ -113,7 +116,13 @@ namespace IncidentService.Application.Incident
                 var validationResult = await _validator.ValidateAsync(request, cancellationToken);
                 if (!validationResult.IsValid)
                 {
-                    var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToArray();
+                    var errors = validationResult.Errors
+                        .GroupBy(e => e.PropertyName)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => g.Select(e => e.ErrorMessage).ToArray()
+                        );
+
                     throw new StatusException(
                         HttpStatusCode.BadRequest,
                         "ValidationError",
@@ -122,10 +131,14 @@ namespace IncidentService.Application.Incident
                     );
                 }
 
-                var incident = await _incidentService.UpdateIncidentById(request.ID, request);
+                if (request.MediaFiles != null && request.MediaFiles.Any())
+                {
+                    _incidentService.ValidateMediaFiles(request.MediaFiles);
+                }
+
+                var incident = await _incidentService.UpdateIncidentById(request.ID, request, _s3Service, cancellationToken);
                 var incidentDto = _mapper.Map<IncidentDTO>(incident);
 
-                // Publish event asynchronously (fire and forget)
                 _ = Task.Run(async () => await _eventPublisher.PublishIncidentUpdatedAsync(incidentDto), cancellationToken);
 
                 return Unit.Value;

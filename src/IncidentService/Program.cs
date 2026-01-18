@@ -8,6 +8,7 @@ using System.Reflection;
 using FluentValidation;
 using IncidentService.Middlewares;
 using Shared.Extensions;
+using Microsoft.AspNetCore.Http;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
@@ -19,6 +20,28 @@ builder.Services.AddSwaggerGen(c =>
         type.FullName!
             .Replace("+", ".")
     );
+    
+    c.MapType<IFormFile>(() => new Microsoft.OpenApi.Models.OpenApiSchema
+    {
+        Type = "string",
+        Format = "binary"
+    });
+    
+    c.MapType<List<IFormFile>>(() => new Microsoft.OpenApi.Models.OpenApiSchema
+    {
+        Type = "array",
+        Items = new Microsoft.OpenApi.Models.OpenApiSchema
+        {
+            Type = "string",
+            Format = "binary"
+        }
+    });
+    
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Incident Service API",
+        Version = "v1"
+    });
 });
 
 builder.Services.AddDbContext<IncidentDbContext>(options =>
@@ -27,6 +50,9 @@ builder.Services.AddScoped<IncidentSvc>();
 
 // AWS Services (LocalStack)
 builder.Services.AddLocalStackAws(builder.Configuration);
+
+// S3 Service
+builder.Services.AddScoped<IS3Service, S3Service>();
 
 // Event Publisher
 builder.Services.AddScoped<IIncidentEventPublisher, IncidentEventPublisher>();
