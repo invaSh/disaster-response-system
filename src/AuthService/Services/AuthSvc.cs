@@ -24,8 +24,8 @@ namespace AuthService.Services
         public async Task<User> RegisterAsync(string email, string password, RoleType roleType)
         {
             // Validate RoleType is either Admin (1) or User (2)
-            if (roleType != RoleType.Admin && roleType != RoleType.User)
-                throw new Exception("RoleType must be either Admin (1) or User (2).");
+            if (roleType != RoleType.Admin && roleType != RoleType.User && roleType != RoleType.IncMan && roleType != RoleType.DisMan)
+                throw new Exception("RoleType must be either Admin (1) or User (2) or IncMan (3) or DisMan (4).");
 
             var existing = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (existing != null)
