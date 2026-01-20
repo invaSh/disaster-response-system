@@ -120,13 +120,42 @@ public class IncidentUpdatedConsumer : BackgroundService
                 return;
             }
 
-            // Process the event - update dispatch order based on incident changes
+            // Process the event - update cached incident and dispatch order
             using var scope = _serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<DispatchService.Persistance.DispatchDbContext>();
             var dispatchService = scope.ServiceProvider.GetRequiredService<DispatchSvc>();
+
+            // First, update the cached incident data
+            var cachedIncident = await dbContext.Incidents.FindAsync(new object[] { incidentId }, cancellationToken);
+            if (cachedIncident != null)
+            {
+                if (!string.IsNullOrEmpty(incidentEvent.Data.Title))
+                    cachedIncident.Title = incidentEvent.Data.Title;
+                
+                if (!string.IsNullOrEmpty(incidentEvent.Data.Type))
+                    cachedIncident.Type = incidentEvent.Data.Type;
+                
+                if (!string.IsNullOrEmpty(incidentEvent.Data.Severity))
+                    cachedIncident.Severity = incidentEvent.Data.Severity;
+                
+                if (!string.IsNullOrEmpty(incidentEvent.Data.Status))
+                    cachedIncident.Status = incidentEvent.Data.Status;
+                
+                if (incidentEvent.Data.Latitude != 0)
+                    cachedIncident.Latitude = incidentEvent.Data.Latitude;
+                
+                if (incidentEvent.Data.Longitude != 0)
+                    cachedIncident.Longitude = incidentEvent.Data.Longitude;
+                
+                cachedIncident.LastSyncedAt = DateTime.UtcNow;
+                
+                await dbContext.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Updated cached incident {IncidentId}", incidentId);
+            }
 
             try
             {
-                // Get the dispatch order for this incident
+                // Get the dispatch order for this incident (if it exists)
                 var dispatchOrder = await dispatchService.GetDispatchOrderByIncidentId(incidentId, cancellationToken);
                 
                 var notesUpdates = new List<string>();
@@ -165,20 +194,14 @@ public class IncidentUpdatedConsumer : BackgroundService
                 // Update dispatch order notes if there are changes
                 if (notesUpdates.Any())
                 {
-                    var updatedNotes = string.Join(" | ", notesUpdates);
-                    var existingNotes = dispatchOrder.Notes ?? string.Empty;
-                    var combinedNotes = string.IsNullOrEmpty(existingNotes) 
-                        ? updatedNotes 
-                        : $"{existingNotes}\n{updatedNotes}";
-
                     var updateDto = new UpdateDispatchOrderRequestDTO
                     {
-                        Notes = combinedNotes
+                        Notes = notesUpdates
                     };
 
                     await dispatchService.UpdateDispatchOrderNotes(dispatchOrder.Id, updateDto, cancellationToken);
-                    _logger.LogInformation("Updated dispatch order {OrderId} for incident {IncidentId} with changes", 
-                        dispatchOrder.Id, incidentId);
+                    _logger.LogInformation("Updated dispatch order {OrderId} for incident {IncidentId} with {Count} new notes", 
+                        dispatchOrder.Id, incidentId, notesUpdates.Count);
                 }
                 else
                 {

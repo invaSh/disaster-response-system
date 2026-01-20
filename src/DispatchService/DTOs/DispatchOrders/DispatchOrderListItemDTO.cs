@@ -1,4 +1,4 @@
-﻿//listohen te dhenat kryesore
+//listohen te dhenat kryesore
 using DispatchService.Enums;
 
 namespace DispatchService.DTOs.DispatchOrders
@@ -13,5 +13,7 @@ namespace DispatchService.DTOs.DispatchOrders
         public DateTime? CompletedAt { get; set; }
 
         public int AssignmentsCount { get; set; }
+
+        public List<string> Notes { get; set; } = new List<string>();
     }
 }

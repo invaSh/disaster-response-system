@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using DispatchService.Domain;
 using DispatchService.DTOs.DispatchOrders;
 using DispatchService.DTOs.DispatchAssignments;
@@ -126,6 +126,10 @@ namespace DispatchService.Services
                 order.Status = DispatchStatus.Created;
                 order.CreatedAt = DateTime.UtcNow;
                 order.CompletedAt = null;
+                
+                // Ensure Notes is initialized
+                if (order.Notes == null)
+                    order.Notes = new List<string>();
 
                 _context.DispatchOrders.Add(order);
                 await _context.SaveChangesAsync(ct);
@@ -234,7 +238,14 @@ namespace DispatchService.Services
                         new { Status = "Dispatch order is not active." }
                     );
 
-                _mapper.Map(dto, order);
+                // Append new notes to existing notes array
+                if (dto.Notes != null && dto.Notes.Any())
+                {
+                    if (order.Notes == null)
+                        order.Notes = new List<string>();
+                    
+                    order.Notes.AddRange(dto.Notes);
+                }
 
                 await _context.SaveChangesAsync(ct);
 

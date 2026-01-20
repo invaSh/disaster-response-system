@@ -1,4 +1,4 @@
-﻿using DispatchService.DTOs.DispatchOrders;
+using DispatchService.DTOs.DispatchOrders;
 using DispatchService.Helpers;
 using DispatchService.Services;
 using FluentValidation;
@@ -12,7 +12,7 @@ namespace DispatchService.Application.DispatchOrder
         public class Command : IRequest<DispatchOrderDetailsDTO>
         {
             public Guid Id { get; set; }
-            public string? Notes { get; set; }
+            public List<string>? Notes { get; set; }
         }
 
         public class CommandValidator : AbstractValidator<Command>
@@ -21,8 +21,8 @@ namespace DispatchService.Application.DispatchOrder
             {
                 RuleFor(x => x.Id).NotEmpty().WithMessage("Id is required.");
 
-                RuleFor(x => x.Notes)
-                    .MaximumLength(1000).WithMessage("Notes is too long.")
+                RuleForEach(x => x.Notes)
+                    .MaximumLength(1000).WithMessage("Each note entry is too long.")
                     .When(x => x.Notes != null);
             }
         }
