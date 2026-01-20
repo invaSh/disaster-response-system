@@ -22,9 +22,9 @@ namespace AuthService.Services
 
         public async Task<Role> CreateRoleAsync(string name, RoleType roleType)
         {
-            // Validate RoleType is either Admin (1) or User (2)
-            if (roleType != RoleType.Admin && roleType != RoleType.User)
-                throw new Exception("RoleType must be either Admin (1) or User (2).");
+            // Validate RoleType is either Admin (1) 
+            if (roleType != RoleType.Admin)
+                throw new Exception("RoleType must be  Admin (1) ");
 
             var existing = await _context.Roles.FirstOrDefaultAsync(r => r.Name == name);
             if (existing != null)
@@ -71,8 +71,8 @@ namespace AuthService.Services
             if (roleType.HasValue)
             {
                 // Validate RoleType is either Admin (1) or User (2)
-                if (roleType.Value != RoleType.Admin && roleType.Value != RoleType.User)
-                    throw new Exception("RoleType must be either Admin (1) or User (2).");
+                if (roleType.Value != RoleType.Admin)
+                    throw new Exception("RoleType must be either Admin (1) ");
 
                 role.RoleType = roleType.Value;
             }

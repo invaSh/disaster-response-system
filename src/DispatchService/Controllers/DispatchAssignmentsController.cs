@@ -1,12 +1,14 @@
-﻿using DispatchService.Application.DispatchAssignment;
+using DispatchService.Application.DispatchAssignment;
 using DispatchService.DTOs.DispatchAssignments;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DispatchService.Controllers
 {
     [ApiController]
     [Route("api/dispatchorders/{dispatchOrderId:guid}/assignments")]
+    [Authorize]
     public class DispatchAssignmentsController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -18,6 +20,7 @@ namespace DispatchService.Controllers
 
         // POST: api/dispatchorders/{dispatchOrderId}/assignments
         [HttpPost]
+        [Authorize(Roles = "Admin,DisMan")]
         public async Task<DispatchAssignmentDTO> Create(Guid dispatchOrderId, [FromBody] CreateDispatchAssignmentRequestDTO dto)
         {
             var command = new Create.Command
@@ -31,6 +34,7 @@ namespace DispatchService.Controllers
 
         // PUT: api/dispatchorders/{dispatchOrderId}/assignments/{assignmentId}/status
         [HttpPut("{assignmentId:guid}/status")]
+        [Authorize(Roles = "Admin,DisMan")]
         public async Task<DispatchAssignmentDTO> UpdateStatus(
             Guid dispatchOrderId,
             Guid assignmentId,

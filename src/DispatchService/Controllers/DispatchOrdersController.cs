@@ -1,13 +1,15 @@
-﻿using DispatchService.Application.DispatchOrder;
+using DispatchService.Application.DispatchOrder;
 using DispatchService.DTOs.DispatchOrders;
 using DispatchService.Enums;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DispatchService.Controllers
 {
     [ApiController]
     [Route("api/dispatchorders")]
+    [Authorize]
     public class DispatchOrdersController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -19,6 +21,7 @@ namespace DispatchService.Controllers
 
         // POST: api/dispatchorders
         [HttpPost]
+        [Authorize(Roles = "Admin,DisMan")]
         public async Task<DispatchOrderDetailsDTO> Create([FromBody] CreateDispatchOrderRequestDTO dto)
         {
             var command = new Create.Command
@@ -32,6 +35,7 @@ namespace DispatchService.Controllers
 
         // GET: api/dispatchorders?status=InProgress
         [HttpGet]
+        [Authorize(Roles = "Admin,DisMan")]
         public async Task<List<DispatchOrderListItemDTO>> GetAll([FromQuery] DispatchStatus? status)
         {
             return await _mediator.Send(new GetAll.Query { Status = status });
@@ -39,6 +43,7 @@ namespace DispatchService.Controllers
 
         // GET: api/dispatchorders/{id}
         [HttpGet("{id:guid}")]
+        [Authorize(Roles = "Admin,DisMan")]
         public async Task<DispatchOrderDetailsDTO> GetOne(Guid id)
         {
             return await _mediator.Send(new GetOne.Query { Id = id });
@@ -46,6 +51,7 @@ namespace DispatchService.Controllers
 
         // GET: api/dispatchorders/by-incident/{incidentId}
         [HttpGet("by-incident/{incidentId:guid}")]
+        [Authorize(Roles = "Admin,DisMan")]
         public async Task<DispatchOrderDetailsDTO> GetByIncidentId(Guid incidentId)
         {
             return await _mediator.Send(new GetByIncidentId.Query { IncidentId = incidentId });
@@ -53,6 +59,7 @@ namespace DispatchService.Controllers
 
         // PUT: api/dispatchorders/{id} 
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Admin,DisMan")]
         public async Task<DispatchOrderDetailsDTO> UpdateNotes(Guid id, [FromBody] UpdateDispatchOrderRequestDTO dto)
         {
             var command = new Update.Command
