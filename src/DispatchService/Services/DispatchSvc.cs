@@ -244,7 +244,11 @@ namespace DispatchService.Services
                     if (order.Notes == null)
                         order.Notes = new List<string>();
                     
-                    order.Notes.AddRange(dto.Notes);
+                    var updatedNotes = new List<string>(order.Notes);
+                    updatedNotes.AddRange(dto.Notes);
+                    order.Notes = updatedNotes;
+                    
+                    _context.Entry(order).Property(o => o.Notes).IsModified = true;
                 }
 
                 await _context.SaveChangesAsync(ct);

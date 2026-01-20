@@ -111,7 +111,13 @@ public class IncidentUpdatedConsumer : BackgroundService
                 return;
             }
 
-            _logger.LogInformation("Processing IncidentUpdated event for incident {IncidentId}", incidentEvent.Data?.ID);
+            _logger.LogInformation("Processing IncidentUpdated event for incident {IncidentId}. Event data: Status={Status}, Severity={Severity}, Title={Title}, Location=({Lat},{Lng})", 
+                incidentEvent.Data?.ID, 
+                incidentEvent.Data?.Status ?? "null",
+                incidentEvent.Data?.Severity ?? "null",
+                incidentEvent.Data?.Title ?? "null",
+                incidentEvent.Data?.Latitude ?? 0,
+                incidentEvent.Data?.Longitude ?? 0);
 
             if (incidentEvent.Data == null || !Guid.TryParse(incidentEvent.Data.ID, out var incidentId))
             {
@@ -125,8 +131,17 @@ public class IncidentUpdatedConsumer : BackgroundService
             var dbContext = scope.ServiceProvider.GetRequiredService<DispatchService.Persistance.DispatchDbContext>();
             var dispatchService = scope.ServiceProvider.GetRequiredService<DispatchSvc>();
 
-            // First, update the cached incident data
+            // First, get the cached incident data to compare changes
             var cachedIncident = await dbContext.Incidents.FindAsync(new object[] { incidentId }, cancellationToken);
+            
+            // Store old values for comparison before updating
+            var oldStatus = cachedIncident?.Status ?? string.Empty;
+            var oldSeverity = cachedIncident?.Severity ?? string.Empty;
+            var oldTitle = cachedIncident?.Title ?? string.Empty;
+            var oldLatitude = cachedIncident?.Latitude ?? 0;
+            var oldLongitude = cachedIncident?.Longitude ?? 0;
+
+            // Update the cached incident data
             if (cachedIncident != null)
             {
                 if (!string.IsNullOrEmpty(incidentEvent.Data.Title))
@@ -159,12 +174,15 @@ public class IncidentUpdatedConsumer : BackgroundService
                 var dispatchOrder = await dispatchService.GetDispatchOrderByIncidentId(incidentId, cancellationToken);
                 
                 var notesUpdates = new List<string>();
+                var hasChanges = false;
 
-                // Handle status changes
-                if (!string.IsNullOrEmpty(incidentEvent.Data.Status))
+                // Handle status changes - only if it actually changed
+                if (!string.IsNullOrEmpty(incidentEvent.Data.Status) && 
+                    !incidentEvent.Data.Status.Equals(oldStatus, StringComparison.OrdinalIgnoreCase))
                 {
                     var status = incidentEvent.Data.Status;
                     notesUpdates.Add($"Incident status updated to: {status}");
+                    hasChanges = true;
                     
                     if (status.Equals("Resolved", StringComparison.OrdinalIgnoreCase) || 
                         status.Equals("Closed", StringComparison.OrdinalIgnoreCase))
@@ -173,26 +191,33 @@ public class IncidentUpdatedConsumer : BackgroundService
                     }
                 }
 
-                // Handle location changes
-                if (incidentEvent.Data.Latitude != 0 && incidentEvent.Data.Longitude != 0)
+                // Handle location changes - only if it actually changed
+                if (incidentEvent.Data.Latitude != 0 && incidentEvent.Data.Longitude != 0 &&
+                    (Math.Abs(incidentEvent.Data.Latitude - oldLatitude) > 0.0001 || 
+                     Math.Abs(incidentEvent.Data.Longitude - oldLongitude) > 0.0001))
                 {
                     notesUpdates.Add($"Incident location updated: Lat {incidentEvent.Data.Latitude}, Long {incidentEvent.Data.Longitude}");
+                    hasChanges = true;
                 }
 
-                // Handle severity changes
-                if (!string.IsNullOrEmpty(incidentEvent.Data.Severity))
+                // Handle severity changes - only if it actually changed
+                if (!string.IsNullOrEmpty(incidentEvent.Data.Severity) && 
+                    !incidentEvent.Data.Severity.Equals(oldSeverity, StringComparison.OrdinalIgnoreCase))
                 {
                     notesUpdates.Add($"Incident severity updated to: {incidentEvent.Data.Severity}");
+                    hasChanges = true;
                 }
 
-                // Handle title/description changes
-                if (!string.IsNullOrEmpty(incidentEvent.Data.Title))
+                // Handle title changes - only if it actually changed
+                if (!string.IsNullOrEmpty(incidentEvent.Data.Title) && 
+                    !incidentEvent.Data.Title.Equals(oldTitle, StringComparison.OrdinalIgnoreCase))
                 {
-                    notesUpdates.Add($"Incident title: {incidentEvent.Data.Title}");
+                    notesUpdates.Add($"Incident title updated: {incidentEvent.Data.Title}");
+                    hasChanges = true;
                 }
 
-                // Update dispatch order notes if there are changes
-                if (notesUpdates.Any())
+                // Update dispatch order notes if there are actual changes
+                if (hasChanges && notesUpdates.Any())
                 {
                     var updateDto = new UpdateDispatchOrderRequestDTO
                     {
@@ -205,7 +230,7 @@ public class IncidentUpdatedConsumer : BackgroundService
                 }
                 else
                 {
-                    _logger.LogInformation("No relevant changes detected for dispatch order of incident {IncidentId}", incidentId);
+                    _logger.LogInformation("No relevant changes detected for dispatch order of incident {IncidentId} (values unchanged)", incidentId);
                 }
             }
             catch (Exception ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
