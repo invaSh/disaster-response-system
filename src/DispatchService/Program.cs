@@ -14,15 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Controllers
 builder.Services.AddControllers();
 
-// Swagger
+// Swagger with Authentication
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.CustomSchemaIds(type =>
-        type.FullName!
-            .Replace("+", ".")
-    );
-});
+builder.Services.AddSwaggerWithAuth();
 
 // DbContext (PostgreSQL)
 builder.Services.AddDbContext<DispatchDbContext>(options =>
@@ -52,6 +46,9 @@ builder.Services.AddMediatR(cfg =>
 // FluentValidation
 builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 
+// JWT Authentication
+builder.Services.AddJwtAuthentication(builder.Configuration);
+
 var app = builder.Build();
 
 // HTTP request pipeline
@@ -64,8 +61,11 @@ if (app.Environment.IsDevelopment())
 // Global exception handling
 app.UseMiddleware<ExceptionMiddleware>();
 
-app.MapControllers();
-
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
 
 app.Run();

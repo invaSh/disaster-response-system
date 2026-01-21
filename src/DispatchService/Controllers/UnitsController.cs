@@ -1,13 +1,15 @@
-﻿using DispatchService.Application.Unit;
+using DispatchService.Application.Unit;
 using DispatchService.DTOs.Units;
 using DispatchService.Enums;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DispatchService.Controllers
 {
     [ApiController]
     [Route("api/units")]
+    [Authorize]
     public class UnitsController : ControllerBase
     {
         private readonly IMediator _mediator;
@@ -19,6 +21,7 @@ namespace DispatchService.Controllers
 
         // POST: api/units
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<UnitDetailsDTO> Create([FromBody] CreateUnitRequestDTO dto)
         {
             var command = new Create.Command
@@ -34,6 +37,7 @@ namespace DispatchService.Controllers
 
         // GET: api/units?type=Ambulance&status=Available
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<List<UnitListItemDTO>> GetAll([FromQuery] UnitType? type, [FromQuery] UnitStatus? status)
         {
             var query = new GetAll.Query
@@ -47,6 +51,7 @@ namespace DispatchService.Controllers
 
         // GET: api/units/{id}
         [HttpGet("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<UnitDetailsDTO> GetOne(Guid id)
         {
             return await _mediator.Send(new GetOne.Query { Id = id });
@@ -54,6 +59,7 @@ namespace DispatchService.Controllers
 
         // PUT: api/units/{id}
         [HttpPut("{id:guid}")]
+        [Authorize(Roles = "Admin")]
         public async Task<UnitDetailsDTO> Update(Guid id, [FromBody] UpdateUnitRequestDTO dto)
         {
             var command = new Update.Command

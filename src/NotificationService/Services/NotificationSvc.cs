@@ -47,7 +47,7 @@ namespace NotificationService.Services
         {
             var notification = await _context.Notifications.FirstOrDefaultAsync(n => n.Id == request.Id, ct);
             if (notification == null)
-                throw new Exception("Notification not found"); // mund të bësh StatusException për prod
+                throw new Exception("Notification not found"); 
 
             if (request.Title != null) notification.Title = request.Title;
             if (request.Message != null) notification.Message = request.Message;
