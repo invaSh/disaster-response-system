@@ -117,19 +117,43 @@ public class IncidentEventConsumer : BackgroundService
 
             _logger.LogInformation("Processing IncidentCreated event for incident {IncidentId}", incidentEvent.Data?.ID);
 
-            // Process the event
-            using var scope = _serviceProvider.CreateScope();
-            var dispatchService = scope.ServiceProvider.GetRequiredService<DispatchSvc>();
-
-            // Create dispatch order for the incident
-            var createOrderDto = new CreateDispatchOrderRequestDTO
+            if (incidentEvent.Data == null || !Guid.TryParse(incidentEvent.Data.ID, out var incidentId))
             {
-                IncidentId = Guid.Parse(incidentEvent.Data!.ID),
-                Notes = $"Auto-created from incident: {incidentEvent.Data.Title}"
-            };
+                _logger.LogWarning("Invalid incident data in event");
+                await DeleteMessageAsync(message.ReceiptHandle);
+                return;
+            }
 
-            await dispatchService.CreateDispatchOrder(createOrderDto, cancellationToken);
-            _logger.LogInformation("Created dispatch order for incident {IncidentId}", incidentEvent.Data.ID);
+            // Cache the incident data locally
+            using var scope = _serviceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<DispatchService.Persistance.DispatchDbContext>();
+
+            var existingIncident = await dbContext.Incidents.FindAsync(new object[] { incidentId }, cancellationToken);
+
+            if (existingIncident == null)
+            {
+                var incident = new DispatchService.Domain.Incident
+                {
+                    Id = incidentId,
+                    IncidentId = incidentEvent.Data.IncidentId,
+                    Title = incidentEvent.Data.Title,
+                    Type = incidentEvent.Data.Type,
+                    Severity = incidentEvent.Data.Severity,
+                    Status = "Active",
+                    Latitude = incidentEvent.Data.Latitude,
+                    Longitude = incidentEvent.Data.Longitude,
+                    ReportedAt = DateTime.UtcNow,
+                    LastSyncedAt = DateTime.UtcNow
+                };
+
+                dbContext.Incidents.Add(incident);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Cached incident {IncidentId} ({Title}) locally", incidentId, incidentEvent.Data.Title);
+            }
+            else
+            {
+                _logger.LogInformation("Incident {IncidentId} already exists in cache", incidentId);
+            }
 
             // Delete the message after successful processing
             await DeleteMessageAsync(message.ReceiptHandle);
