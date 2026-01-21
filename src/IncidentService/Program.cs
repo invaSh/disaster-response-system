@@ -2,6 +2,7 @@ using IncidentService.Persistance;
 using Microsoft.EntityFrameworkCore;
 using IncidentService.Services;
 using IncidentService.Messaging.Publishers;
+using IncidentService.Messaging.Consumers;
 using Microsoft.Extensions.DependencyInjection;
 using AutoMapper;
 using System.Reflection;
@@ -82,6 +83,9 @@ builder.Services.AddScoped<IS3Service, S3Service>();
 
 // Event Publisher
 builder.Services.AddScoped<IIncidentEventPublisher, IncidentEventPublisher>();
+
+// Background Services (Consumers)
+builder.Services.AddHostedService<DispatchEventConsumer>();
 
 builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));

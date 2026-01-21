@@ -125,4 +125,32 @@ echo "Notification Updated Queue URL: $NOTIFICATION_UPDATED_QUEUE_URL"
 echo "Dispatch Deleted Queue URL: $DISPATCH_DELETED_QUEUE_URL"
 echo "Notification Deleted Queue URL: $NOTIFICATION_DELETED_QUEUE_URL"
 
+# creating SNS topic for dispatch events
+awslocal sns create-topic --name dispatch-events-topic
+DISPATCH_EVENTS_TOPIC_ARN=$(awslocal sns list-topics --query 'Topics[?contains(TopicArn, `dispatch-events-topic`)].TopicArn' --output text)
+echo "Created SNS topic: $DISPATCH_EVENTS_TOPIC_ARN"
+
+# creating SQS queue for dispatch events consumer (IncidentService)
+awslocal sqs create-queue --queue-name incident-dispatch-queue
+
+# Get queue URL
+INCIDENT_DISPATCH_QUEUE_URL=$(awslocal sqs get-queue-url --queue-name incident-dispatch-queue --query 'QueueUrl' --output text)
+
+# Get queue ARN
+INCIDENT_DISPATCH_QUEUE_ARN=$(awslocal sqs get-queue-attributes --queue-url "$INCIDENT_DISPATCH_QUEUE_URL" --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)
+
+# Subscribe queue to SNS topic
+awslocal sns subscribe \
+  --topic-arn "$DISPATCH_EVENTS_TOPIC_ARN" \
+  --protocol sqs \
+  --notification-endpoint "$INCIDENT_DISPATCH_QUEUE_ARN"
+
+# Set queue policy to allow SNS to send messages
+awslocal sqs set-queue-attributes \
+  --queue-url "$INCIDENT_DISPATCH_QUEUE_URL" \
+  --attributes Policy="{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"sqs:SendMessage\",\"Resource\":\"$INCIDENT_DISPATCH_QUEUE_ARN\",\"Condition\":{\"ArnEquals\":{\"aws:SourceArn\":\"$DISPATCH_EVENTS_TOPIC_ARN\"}}}]}"
+
+echo "Created dispatch events SNS topic and incident-dispatch-queue"
+echo "Incident Dispatch Queue URL: $INCIDENT_DISPATCH_QUEUE_URL"
+
 echo "########### Initialization Complete ###########"

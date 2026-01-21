@@ -35,10 +35,13 @@ namespace DispatchService.Controllers
             return await _mediator.Send(command);
         }
 
-        // GET: api/units?type=Ambulance&status=Available
+        // GET: api/units (returns all units)
+        // GET: api/units?type=Ambulance (filters by type)
+        // GET: api/units?status=Available (filters by status)
+        // GET: api/units?type=Ambulance&status=Available (filters by both)
         [HttpGet]
-        [Authorize(Roles = "Admin")]
-        public async Task<List<UnitListItemDTO>> GetAll([FromQuery] UnitType? type, [FromQuery] UnitStatus? status)
+        [Authorize(Roles = "Admin, DisMan")]
+        public async Task<List<UnitListItemDTO>> GetAll([FromQuery] UnitType? type = null, [FromQuery] UnitStatus? status = null)
         {
             var query = new GetAll.Query
             {
@@ -51,7 +54,7 @@ namespace DispatchService.Controllers
 
         // GET: api/units/{id}
         [HttpGet("{id:guid}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin, DisMan")]
         public async Task<UnitDetailsDTO> GetOne(Guid id)
         {
             return await _mediator.Send(new GetOne.Query { Id = id });
