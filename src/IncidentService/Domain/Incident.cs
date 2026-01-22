@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using IncidentService.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,7 +33,9 @@ namespace IncidentService.Domain
 
         public ICollection<MediaFile>? MediaFiles { get; set; }
 
-        public Dictionary<string, string>? Metadata { get; set; } 
+        public Dictionary<string, string>? Metadata { get; set; }
+
+        public Guid? CreatedByUserId { get; set; }
     }
 
 }

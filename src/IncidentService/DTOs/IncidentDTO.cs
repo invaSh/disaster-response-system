@@ -32,5 +32,7 @@ namespace IncidentService.DTOs
         public List<MediaFileDTO> MediaFiles { get; set; }
 
         public Dictionary<string, string> Metadata { get; set; }
+
+        public Guid? CreatedByUserId { get; set; }
     }
 }

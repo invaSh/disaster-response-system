@@ -143,7 +143,8 @@ public class IncidentEventConsumer : BackgroundService
                     Latitude = incidentEvent.Data.Latitude,
                     Longitude = incidentEvent.Data.Longitude,
                     ReportedAt = DateTime.UtcNow,
-                    LastSyncedAt = DateTime.UtcNow
+                    LastSyncedAt = DateTime.UtcNow,
+                    CreatedByUserId = incidentEvent.Data.CreatedByUserId
                 };
 
                 dbContext.Incidents.Add(incident);
@@ -201,5 +202,6 @@ public class IncidentEventConsumer : BackgroundService
         public string Severity { get; set; } = string.Empty;
         public double Latitude { get; set; }
         public double Longitude { get; set; }
+        public Guid? CreatedByUserId { get; set; }
     }
 }

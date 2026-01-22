@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using IncidentService.Application.Incident;
 using IncidentService.DTOs;
+using System.Security.Claims;
 
 namespace IncidentService.Controllers
 {
@@ -39,6 +40,14 @@ namespace IncidentService.Controllers
         [Authorize(Roles = "Admin,IncMan,User")]
         public async Task<IncidentDTO> Create([FromForm] Create.Command command)
         {
+            var userIdClaim = User.FindFirst("sub") 
+                ?? User.FindFirst(ClaimTypes.NameIdentifier);
+            
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                command.CreatedByUserId = userId;
+            }
+
             return await _mediator.Send(command);
         }
 

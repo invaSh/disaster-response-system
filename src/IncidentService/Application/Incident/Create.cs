@@ -28,6 +28,8 @@ namespace IncidentService.Application.Incident
             public string Severity { get; set; }
 
             public List<IFormFile>? MediaFiles { get; set; }
+
+            public Guid? CreatedByUserId { get; set; }
         }
 
         public class CommandValidator : AbstractValidator<Command>

@@ -26,5 +26,8 @@ namespace DispatchService.Domain
         
         // Cache metadata
         public DateTime LastSyncedAt { get; set; }
+        
+        // User tracking
+        public Guid? CreatedByUserId { get; set; }
     }
 }
