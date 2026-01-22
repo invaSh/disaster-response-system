@@ -1,5 +1,6 @@
 using IncidentService.Persistance;
 using IncidentService.Domain;
+using IncidentService.Enums;
 using Microsoft.EntityFrameworkCore;
 using IncidentService.DTOs;
 using AutoMapper;
@@ -53,6 +54,7 @@ namespace IncidentService.Services
             {
                 var incident = mapper.Map<Incident>(createIncident);
                 incident.IncidentId = HelperService.GenerateIncidentCode();
+                incident.Status = Status.Open; // Explicitly set initial status to Open
 
                 _context.Incidents.Add(incident);
                 await _context.SaveChangesAsync(cancellationToken);

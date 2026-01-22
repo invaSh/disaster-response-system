@@ -1,6 +1,7 @@
 using DispatchService.Persistance;
 using DispatchService.Services;
 using DispatchService.Messaging.Consumers;
+using DispatchService.Messaging.Publishers;
 using DispatchService.Middlewares;
 using Microsoft.EntityFrameworkCore;
 using AutoMapper;
@@ -30,6 +31,9 @@ builder.Services.AddLocalStackAws(builder.Configuration);
 
 // Services
 builder.Services.AddScoped<DispatchSvc>();
+
+// Event Publisher
+builder.Services.AddScoped<IDispatchEventPublisher, DispatchEventPublisher>();
 
 // Background Services
 builder.Services.AddHostedService<IncidentEventConsumer>();

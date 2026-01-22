@@ -6,6 +6,7 @@ using DispatchService.DTOs.Units;
 using DispatchService.Enums;
 using DispatchService.Helpers;
 using DispatchService.Persistance;
+using DispatchService.Messaging.Publishers;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 
@@ -15,11 +16,13 @@ namespace DispatchService.Services
     {
         private readonly DispatchDbContext _context;
         private readonly IMapper _mapper;
+        private readonly IDispatchEventPublisher _eventPublisher;
 
-        public DispatchSvc(DispatchDbContext context, IMapper mapper)
+        public DispatchSvc(DispatchDbContext context, IMapper mapper, IDispatchEventPublisher eventPublisher)
         {
             _context = context;
             _mapper = mapper;
+            _eventPublisher = eventPublisher;
         }
 
 
@@ -133,6 +136,9 @@ namespace DispatchService.Services
 
                 _context.DispatchOrders.Add(order);
                 await _context.SaveChangesAsync(ct);
+
+                // Publish event for incident status update
+                _ = Task.Run(async () => await _eventPublisher.PublishDispatchOrderCreatedAsync(order.Id, order.IncidentId), ct);
 
                 return _mapper.Map<DispatchOrderDetailsDTO>(order);
             }
@@ -323,6 +329,9 @@ namespace DispatchService.Services
 
                 await _context.SaveChangesAsync(ct);
 
+                // Publish event for incident status update
+                _ = Task.Run(async () => await _eventPublisher.PublishDispatchAssignmentCreatedAsync(assignment.Id, dispatchOrderId, order.IncidentId), ct);
+
                 var assignmentWithUnit = await _context.DispatchAssignments
                     .Include(a => a.Unit)
                     .FirstOrDefaultAsync(a => a.Id == assignment.Id, ct);
@@ -375,9 +384,18 @@ namespace DispatchService.Services
                 {
                     assignment.DispatchOrder.Status = DispatchStatus.Completed;
                     assignment.DispatchOrder.CompletedAt = DateTime.UtcNow;
+                    
+                    await _context.SaveChangesAsync(ct);
+                    
+                    // Publish event for incident status update
+                    _ = Task.Run(async () => await _eventPublisher.PublishDispatchOrderCompletedAsync(
+                        assignment.DispatchOrder.Id, 
+                        assignment.DispatchOrder.IncidentId), ct);
                 }
-
-                await _context.SaveChangesAsync(ct);
+                else
+                {
+                    await _context.SaveChangesAsync(ct);
+                }
 
                 return _mapper.Map<DispatchAssignmentDTO>(assignment);
             }
