@@ -1,4 +1,4 @@
-﻿using DispatchService.Domain;
+using DispatchService.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace DispatchService.Persistance
@@ -13,6 +13,7 @@ namespace DispatchService.Persistance
         public DbSet<Unit> Units => Set<Unit>();
         public DbSet<DispatchOrder> DispatchOrders => Set<DispatchOrder>();
         public DbSet<DispatchAssignment> DispatchAssignments => Set<DispatchAssignment>();
+        public DbSet<Incident> Incidents => Set<Incident>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -39,6 +40,36 @@ namespace DispatchService.Persistance
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
+            modelBuilder.Entity<Incident>(entity =>
+            {
+                entity.HasKey(i => i.Id);
+
+                entity.Property(i => i.IncidentId)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(i => i.Title)
+                      .IsRequired()
+                      .HasMaxLength(200);
+
+                entity.Property(i => i.Type)
+                      .IsRequired()
+                      .HasMaxLength(50);
+
+                entity.Property(i => i.Severity)
+                      .IsRequired()
+                      .HasMaxLength(50);
+
+                entity.Property(i => i.Status)
+                      .IsRequired()
+                      .HasMaxLength(50);
+
+                entity.Property(i => i.Latitude).IsRequired();
+                entity.Property(i => i.Longitude).IsRequired();
+                entity.Property(i => i.ReportedAt).IsRequired();
+                entity.Property(i => i.LastSyncedAt).IsRequired();
+            });
+
             // DispatchOrder
             modelBuilder.Entity<DispatchOrder>(entity =>
             {
@@ -49,7 +80,17 @@ namespace DispatchService.Persistance
                 entity.Property(o => o.CreatedAt).IsRequired();
 
                 entity.Property(o => o.Notes)
-                      .HasMaxLength(500);
+                      .HasColumnType("jsonb")
+                      .HasConversion(
+                          v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
+                          v => string.IsNullOrEmpty(v) 
+                              ? new List<string>() 
+                              : System.Text.Json.JsonSerializer.Deserialize<List<string>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<string>());
+
+                entity.HasOne(o => o.Incident)
+                      .WithMany()
+                      .HasForeignKey(o => o.IncidentId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasMany(o => o.Assignments)
                       .WithOne(a => a.DispatchOrder)
