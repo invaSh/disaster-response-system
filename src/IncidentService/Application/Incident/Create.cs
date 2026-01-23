@@ -28,6 +28,8 @@ namespace IncidentService.Application.Incident
             public string Severity { get; set; }
 
             public List<IFormFile>? MediaFiles { get; set; }
+
+            public Guid? CreatedByUserId { get; set; }
         }
 
         public class CommandValidator : AbstractValidator<Command>
@@ -122,6 +124,12 @@ namespace IncidentService.Application.Incident
 
                 var incident = await _incidentService.CreateIncident(request, _s3Service, cancellationToken);
                 var incidentDto = _mapper.Map<IncidentDTO>(incident);
+
+                // Ensure CreatedByUserId is included in the DTO
+                if (incident.CreatedByUserId.HasValue && !incidentDto.CreatedByUserId.HasValue)
+                {
+                    incidentDto.CreatedByUserId = incident.CreatedByUserId;
+                }
 
                 _ = Task.Run(async () => await _eventPublisher.PublishIncidentCreatedAsync(incidentDto), cancellationToken);
 

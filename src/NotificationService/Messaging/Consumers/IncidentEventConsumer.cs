@@ -122,9 +122,22 @@ public class IncidentEventConsumer : BackgroundService
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
             // Create notification for the incident
+            var metadata = new Dictionary<string, string>
+            {
+                { "IncidentId", incidentEvent.Data!.IncidentId },
+                { "Latitude", incidentEvent.Data.Latitude.ToString() },
+                { "Longitude", incidentEvent.Data.Longitude.ToString() }
+            };
+
+            // Add CreatedByUserId to metadata if available
+            if (incidentEvent.Data.CreatedByUserId.HasValue)
+            {
+                metadata.Add("CreatedByUserId", incidentEvent.Data.CreatedByUserId.Value.ToString());
+            }
+
             var createNotificationCommand = new Create.Command
             {
-                Title = $"New Incident: {incidentEvent.Data!.Title}",
+                Title = $"New Incident: {incidentEvent.Data.Title}",
                 Message = $"A new {incidentEvent.Data.Type} incident has been reported: {incidentEvent.Data.Description ?? "No description"}",
                 Category = "Incident",
                 Type = "Alert",
@@ -133,12 +146,7 @@ public class IncidentEventConsumer : BackgroundService
                 RecipientId = "all",
                 ReferenceType = "Incident",
                 ReferenceId = incidentEvent.Data.ID,
-                Metadata = new Dictionary<string, string>
-                {
-                    { "IncidentId", incidentEvent.Data.IncidentId },
-                    { "Latitude", incidentEvent.Data.Latitude.ToString() },
-                    { "Longitude", incidentEvent.Data.Longitude.ToString() }
-                }
+                Metadata = metadata
             };
 
             await mediator.Send(createNotificationCommand, cancellationToken);
@@ -192,5 +200,6 @@ public class IncidentEventConsumer : BackgroundService
         public string Severity { get; set; } = string.Empty;
         public double Latitude { get; set; }
         public double Longitude { get; set; }
+        public Guid? CreatedByUserId { get; set; }
     }
 }
