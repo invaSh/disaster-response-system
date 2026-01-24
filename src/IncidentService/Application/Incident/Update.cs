@@ -64,9 +64,13 @@ namespace IncidentService.Application.Incident
                     .Must(BeValidSeverity).WithMessage("Invalid severity category.")
                     .When(x => !string.IsNullOrWhiteSpace(x.Severity));
 
+                RuleFor(x => x.Status)
+                    .Must(BeValidStatus).WithMessage("Invalid status category.")
+                    .When(x => !string.IsNullOrWhiteSpace(x.Status));
+
                 RuleFor(x => x.ReporterName)
-                     .Must(x => x == null || !string.IsNullOrWhiteSpace(x))
-                     .WithMessage("Reporter name must be a valid string.");
+                    .Must(x => x == null || !string.IsNullOrWhiteSpace(x))
+                    .WithMessage("Reporter name must be a valid string.");
 
                 RuleFor(x => x.ReporterContact)
                     .Must(x => x == null || !string.IsNullOrWhiteSpace(x))

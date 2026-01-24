@@ -55,6 +55,13 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 
 var app = builder.Build();
 
+// Apply database migrations automatically
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<DispatchDbContext>();
+    dbContext.Database.Migrate();
+}
+
 // HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {

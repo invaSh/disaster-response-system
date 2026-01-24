@@ -1,7 +1,10 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using AuthService.Domain;
+using AuthService.Enums;
 using AuthService.Helpers;
 using AuthService.Persistence;
 using AuthService.Services;
@@ -64,6 +67,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 var app = builder.Build(); 
+
+// Apply database migrations automatically
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+    dbContext.Database.Migrate();
+    
+    var rolesToSeed = new List<Role>
+    {
+        new Role { Id = Guid.NewGuid(), Name = "Admin", RoleType = RoleType.Admin },
+        new Role { Id = Guid.NewGuid(), Name = "User", RoleType = RoleType.User },
+        new Role { Id = Guid.NewGuid(), Name = "IncMan", RoleType = RoleType.IncMan },
+        new Role { Id = Guid.NewGuid(), Name = "DisMan", RoleType = RoleType.DisMan }
+    };
+    
+    foreach (var role in rolesToSeed)
+    {
+        if (!dbContext.Roles.Any(r => r.RoleType == role.RoleType))
+        {
+            dbContext.Roles.Add(role);
+        }
+    }
+    
+    dbContext.SaveChanges();
+}
 
 if (app.Environment.IsDevelopment())
 {

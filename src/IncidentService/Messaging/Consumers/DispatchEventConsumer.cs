@@ -62,7 +62,7 @@ public class DispatchEventConsumer : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error receiving messages from SQS queue");
-                await Task.Delay(5000, stoppingToken); // Wait before retrying
+                await Task.Delay(5000, stoppingToken);
             }
         }
     }
@@ -80,7 +80,6 @@ public class DispatchEventConsumer : BackgroundService
         catch (QueueDoesNotExistException)
         {
             _logger.LogWarning("Queue {QueueName} does not exist. Will retry...", queueName);
-            // Queue will be created by setup script, so we'll retry
             await Task.Delay(5000, cancellationToken);
             await InitializeQueueAsync(cancellationToken);
         }
@@ -168,7 +167,7 @@ public class DispatchEventConsumer : BackgroundService
             {
                 ID = incidentId,
                 Title = incident.Title,
-                Description = incident.Description ?? "No description", // Validator requires non-empty
+                Description = incident.Description ?? "No description", 
                 Type = incident.Type.ToString(),
                 ReporterName = incident.ReporterName,
                 ReporterContact = incident.ReporterContact,
@@ -180,7 +179,7 @@ public class DispatchEventConsumer : BackgroundService
                 ResolvedAt = dispatchEvent.EventType == "DispatchAssignmentCompleted"
                     ? (dispatchEvent.Timestamp == default ? DateTime.UtcNow : dispatchEvent.Timestamp)
                     : incident.ResolvedAt,
-                Updates = null, // Updates are not modified here
+                Updates = null,
                 Metadata = incident.Metadata
             };
 

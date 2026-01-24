@@ -84,7 +84,6 @@ public class IncidentEventPublisher : IIncidentEventPublisher
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to publish IncidentCreated event for incident {IncidentId}", incident.ID);
-            // Don't throw - we don't want to fail incident creation if event publishing fails
         }
     }
 
