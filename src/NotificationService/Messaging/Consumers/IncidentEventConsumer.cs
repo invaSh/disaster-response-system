@@ -1,10 +1,9 @@
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using System.Text.Json;
-using NotificationService.Application.Notifications;
-using MediatR;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Hosting;
+using NotificationService.Services;
 
 namespace NotificationService.Messaging.Consumers;
 
@@ -119,38 +118,23 @@ public class IncidentEventConsumer : BackgroundService
 
             // Process the event
             using var scope = _serviceProvider.CreateScope();
-            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            var notificationSvc = scope.ServiceProvider.GetRequiredService<NotificationSvc>();
 
-            // Create notification for the incident
-            var metadata = new Dictionary<string, string>
+            // Keep event validation simple here; core creation logic lives in NotificationSvc
+            if (incidentEvent.Data?.CreatedByUserId is Guid createdByUserId)
             {
-                { "IncidentId", incidentEvent.Data!.IncidentId },
-                { "Latitude", incidentEvent.Data.Latitude.ToString() },
-                { "Longitude", incidentEvent.Data.Longitude.ToString() }
-            };
+                await notificationSvc.CreateIncidentCreatedNotification(
+                    createdByUserId: createdByUserId,
+                    incidentDbId: incidentEvent.Data.ID,
+                    incidentPublicId: incidentEvent.Data.IncidentId,
+                    incidentStatus: incidentEvent.Data.Status,
+                    severity: incidentEvent.Data.Severity,
+                    latitude: incidentEvent.Data.Latitude,
+                    longitude: incidentEvent.Data.Longitude,
+                    ct: cancellationToken);
 
-            // Add CreatedByUserId to metadata if available
-            if (incidentEvent.Data.CreatedByUserId.HasValue)
-            {
-                metadata.Add("CreatedByUserId", incidentEvent.Data.CreatedByUserId.Value.ToString());
+                _logger.LogInformation("Created notification for incident {IncidentId}", incidentEvent.Data.ID);
             }
-
-            var createNotificationCommand = new Create.Command
-            {
-                Title = $"New Incident: {incidentEvent.Data.Title}",
-                Message = $"A new {incidentEvent.Data.Type} incident has been reported: {incidentEvent.Data.Description ?? "No description"}",
-                Category = "Incident",
-                Type = "Alert",
-                Severity = incidentEvent.Data.Severity,
-                RecipientType = "System",
-                RecipientId = "all",
-                ReferenceType = "Incident",
-                ReferenceId = incidentEvent.Data.ID,
-                Metadata = metadata
-            };
-
-            await mediator.Send(createNotificationCommand, cancellationToken);
-            _logger.LogInformation("Created notification for incident {IncidentId}", incidentEvent.Data.ID);
 
             // Delete the message after successful processing
             await DeleteMessageAsync(message.ReceiptHandle);
@@ -198,6 +182,7 @@ public class IncidentEventConsumer : BackgroundService
         public string? Description { get; set; }
         public string Type { get; set; } = string.Empty;
         public string Severity { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public Guid? CreatedByUserId { get; set; }

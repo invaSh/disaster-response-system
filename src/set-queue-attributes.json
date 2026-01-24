@@ -1,0 +1,6 @@
+{
+    "QueueUrl":  "http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/notification-dispatch-queue",
+    "Attributes":  {
+                       "Policy":  "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":\"sqs:SendMessage\",\"Condition\":{\"ArnEquals\":{\"aws:SourceArn\":\"arn:aws:sns:us-east-1:000000000000:dispatch-events-topic\"}},\"Principal\":\"*\",\"Resource\":\"arn:aws:sqs:us-east-1:000000000000:notification-dispatch-queue\",\"Effect\":\"Allow\",\"Sid\":\"Allow-SNS-SendMessage\"}]}"
+                   }
+}
