@@ -20,6 +20,34 @@ namespace NotificationService.Services
             _mapper = mapper;
         }
 
+        private async Task<string> GetIncidentSeverityAsync(string incidentReferenceId, CancellationToken ct)
+        {
+            // We cannot use Dictionary.ContainsKey / indexer in an EF query here (not translatable).
+            // So we load a small set of notifications for this incident and filter metadata in-memory.
+            var notifications = await _context.Notifications
+                .AsNoTracking()
+                .Where(n => n.ReferenceType == "Incident" && n.ReferenceId == incidentReferenceId)
+                .OrderByDescending(n => n.CreatedAt)
+                .Select(n => new { n.Severity, n.CreatedAt, n.Metadata })
+                .ToListAsync(ct);
+
+            var createdSeverity = notifications
+                .Where(n => n.Metadata != null &&
+                            n.Metadata.TryGetValue("EventType", out var evt) &&
+                            evt == "IncidentCreated")
+                .Select(n => n.Severity)
+                .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
+
+            if (!string.IsNullOrWhiteSpace(createdSeverity))
+                return createdSeverity;
+
+            var anySeverity = notifications
+                .Select(n => n.Severity)
+                .FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
+
+            return string.IsNullOrWhiteSpace(anySeverity) ? "Low" : anySeverity;
+        }
+
         public async Task<Notification> CreateNotification(Create.Command request, CancellationToken ct)
         {
             var notification = _mapper.Map<Notification>(request);
@@ -80,6 +108,7 @@ namespace NotificationService.Services
             Guid userId,
             CancellationToken ct)
         {
+            var severity = await GetIncidentSeverityAsync(incidentId.ToString(), ct);
             var notification = new Notification
             {
                 Id = Guid.NewGuid(),
@@ -87,7 +116,7 @@ namespace NotificationService.Services
                 Message = "Incidenti qe keni krijuar eshte pare",
                 Category = "Incident",
                 Type = "Info",
-                Severity = "Low",
+                Severity = severity,
                 RecipientType = "User",
                 RecipientId = userId.ToString(),
                 ReferenceType = "Incident",
@@ -115,6 +144,7 @@ namespace NotificationService.Services
             Guid? dispatchAssignmentId,
             CancellationToken ct)
         {
+            var severity = await GetIncidentSeverityAsync(incidentId.ToString(), ct);
             var message = dispatchEventType switch
             {
                 "DispatchOrderCreated" => "incidenti eshte pare nga ekipet e ndihmes",
@@ -139,7 +169,7 @@ namespace NotificationService.Services
                 Message = message,
                 Category = "Dispatch",
                 Type = "Info",
-                Severity = "Low",
+                Severity = severity,
                 RecipientType = "User",
                 RecipientId = createdByUserId.ToString(),
                 ReferenceType = "Incident",

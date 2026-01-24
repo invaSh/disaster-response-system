@@ -291,6 +291,10 @@ NotificationService/
    - SQS queues: `dispatch-incident-queue` and `notification-incident-queue`
    - Two subscriptions linking the queues to the topic
 
+   And also (for dispatch events):
+   - SNS topic: `dispatch-events-topic`
+   - SQS queues: `incident-dispatch-queue` and `notification-dispatch-queue`
+
 ### Step 2: Start Your Services
 
 Start all three services in separate terminals:

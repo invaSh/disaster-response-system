@@ -12,6 +12,7 @@ echo "Created SNS topic: $INCIDENT_TOPIC_ARN"
 # creating SQS queues for consumers
 awslocal sqs create-queue --queue-name dispatch-incident-queue
 awslocal sqs create-queue --queue-name notification-incident-queue
+awslocal sqs create-queue --queue-name notification-email-queue
 
 # Get queue URLs
 DISPATCH_QUEUE_URL=$(awslocal sqs get-queue-url --queue-name dispatch-incident-queue --query 'QueueUrl' --output text)
@@ -130,27 +131,40 @@ awslocal sns create-topic --name dispatch-events-topic
 DISPATCH_EVENTS_TOPIC_ARN=$(awslocal sns list-topics --query 'Topics[?contains(TopicArn, `dispatch-events-topic`)].TopicArn' --output text)
 echo "Created SNS topic: $DISPATCH_EVENTS_TOPIC_ARN"
 
-# creating SQS queue for dispatch events consumer (IncidentService)
+# creating SQS queues for dispatch events consumers (IncidentService + NotificationService)
 awslocal sqs create-queue --queue-name incident-dispatch-queue
+awslocal sqs create-queue --queue-name notification-dispatch-queue
 
-# Get queue URL
+# Get queue URLs
 INCIDENT_DISPATCH_QUEUE_URL=$(awslocal sqs get-queue-url --queue-name incident-dispatch-queue --query 'QueueUrl' --output text)
+NOTIFICATION_DISPATCH_QUEUE_URL=$(awslocal sqs get-queue-url --queue-name notification-dispatch-queue --query 'QueueUrl' --output text)
 
-# Get queue ARN
+# Get queue ARNs
 INCIDENT_DISPATCH_QUEUE_ARN=$(awslocal sqs get-queue-attributes --queue-url "$INCIDENT_DISPATCH_QUEUE_URL" --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)
+NOTIFICATION_DISPATCH_QUEUE_ARN=$(awslocal sqs get-queue-attributes --queue-url "$NOTIFICATION_DISPATCH_QUEUE_URL" --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)
 
-# Subscribe queue to SNS topic
+# Subscribe queues to SNS topic
 awslocal sns subscribe \
   --topic-arn "$DISPATCH_EVENTS_TOPIC_ARN" \
   --protocol sqs \
   --notification-endpoint "$INCIDENT_DISPATCH_QUEUE_ARN"
 
-# Set queue policy to allow SNS to send messages
+awslocal sns subscribe \
+  --topic-arn "$DISPATCH_EVENTS_TOPIC_ARN" \
+  --protocol sqs \
+  --notification-endpoint "$NOTIFICATION_DISPATCH_QUEUE_ARN"
+
+# Set queue policies to allow SNS to send messages
 awslocal sqs set-queue-attributes \
   --queue-url "$INCIDENT_DISPATCH_QUEUE_URL" \
   --attributes Policy="{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"sqs:SendMessage\",\"Resource\":\"$INCIDENT_DISPATCH_QUEUE_ARN\",\"Condition\":{\"ArnEquals\":{\"aws:SourceArn\":\"$DISPATCH_EVENTS_TOPIC_ARN\"}}}]}"
 
-echo "Created dispatch events SNS topic and incident-dispatch-queue"
+awslocal sqs set-queue-attributes \
+  --queue-url "$NOTIFICATION_DISPATCH_QUEUE_URL" \
+  --attributes Policy="{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"sqs:SendMessage\",\"Resource\":\"$NOTIFICATION_DISPATCH_QUEUE_ARN\",\"Condition\":{\"ArnEquals\":{\"aws:SourceArn\":\"$DISPATCH_EVENTS_TOPIC_ARN\"}}}]}"
+
+echo "Created dispatch events SNS topic and dispatch consumer queues"
 echo "Incident Dispatch Queue URL: $INCIDENT_DISPATCH_QUEUE_URL"
+echo "Notification Dispatch Queue URL: $NOTIFICATION_DISPATCH_QUEUE_URL"
 
 echo "########### Initialization Complete ###########"

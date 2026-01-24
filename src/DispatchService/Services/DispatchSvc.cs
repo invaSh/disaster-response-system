@@ -342,7 +342,12 @@ namespace DispatchService.Services
                     .Select(i => i.CreatedByUserId)
                     .FirstOrDefaultAsync(ct);
 
-                _ = Task.Run(async () => await _eventPublisher.PublishDispatchAssignmentCreatedAsync(assignment.Id, dispatchOrderId, order.IncidentId, incidentCreatorUserId), ct);
+                _ = Task.Run(async () => await _eventPublisher.PublishDispatchAssignmentCreatedAsync(
+                    assignment.Id,
+                    dispatchOrderId,
+                    order.IncidentId,
+                    assignment.UnitId,
+                    incidentCreatorUserId), ct);
 
                 var assignmentWithUnit = await _context.DispatchAssignments
                     .Include(a => a.Unit)
@@ -412,6 +417,7 @@ namespace DispatchService.Services
                             assignment.Id,
                             assignment.DispatchOrder.Id,
                             assignment.DispatchOrder.IncidentId,
+                            assignment.UnitId,
                             incidentCreatorUserId), ct);
                     }
                     
@@ -442,6 +448,7 @@ namespace DispatchService.Services
                             assignment.Id,
                             assignment.DispatchOrder.Id,
                             assignment.DispatchOrder.IncidentId,
+                            assignment.UnitId,
                             incidentCreatorUserId), ct);
                     }
                 }

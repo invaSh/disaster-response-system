@@ -53,6 +53,9 @@ namespace IncidentService.Services
             try
             {
                 var incident = mapper.Map<Incident>(createIncident);
+                // Defensive: ensure Title from request is persisted as-is.
+                // (Some clients/form posts can be tricky; this guarantees we don't end up with an unexpected title.)
+                incident.Title = createIncident.Title;
                 incident.IncidentId = HelperService.GenerateIncidentCode();
                 incident.Status = Status.Open; // Explicitly set initial status to Open
 

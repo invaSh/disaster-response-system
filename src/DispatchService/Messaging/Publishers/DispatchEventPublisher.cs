@@ -9,8 +9,8 @@ namespace DispatchService.Messaging.Publishers;
 public interface IDispatchEventPublisher
 {
     Task PublishDispatchOrderCreatedAsync(Guid dispatchOrderId, Guid incidentId, Guid? createdByUserId);
-    Task PublishDispatchAssignmentCreatedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid? createdByUserId);
-    Task PublishDispatchAssignmentCompletedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid? createdByUserId);
+    Task PublishDispatchAssignmentCreatedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid unitId, Guid? createdByUserId);
+    Task PublishDispatchAssignmentCompletedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid unitId, Guid? createdByUserId);
     Task PublishDispatchOrderCompletedAsync(Guid dispatchOrderId, Guid incidentId, Guid? createdByUserId);
 }
 
@@ -94,7 +94,7 @@ public class DispatchEventPublisher : IDispatchEventPublisher
         }
     }
 
-    public async Task PublishDispatchAssignmentCreatedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid? createdByUserId)
+    public async Task PublishDispatchAssignmentCreatedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid unitId, Guid? createdByUserId)
     {
         try
         {
@@ -123,6 +123,7 @@ public class DispatchEventPublisher : IDispatchEventPublisher
                     DispatchAssignmentId = dispatchAssignmentId.ToString(),
                     DispatchOrderId = dispatchOrderId.ToString(),
                     IncidentId = incidentId.ToString(),
+                    UnitId = unitId.ToString(),
                     CreatedByUserId = createdByUserId?.ToString() ?? string.Empty,
                     // AssignmentStatus enum value on creation is Assigned = 1
                     AssignmentStatus = "1"
@@ -161,7 +162,7 @@ public class DispatchEventPublisher : IDispatchEventPublisher
         }
     }
 
-    public async Task PublishDispatchAssignmentCompletedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid? createdByUserId)
+    public async Task PublishDispatchAssignmentCompletedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid unitId, Guid? createdByUserId)
     {
         try
         {
@@ -190,6 +191,7 @@ public class DispatchEventPublisher : IDispatchEventPublisher
                     DispatchAssignmentId = dispatchAssignmentId.ToString(),
                     DispatchOrderId = dispatchOrderId.ToString(),
                     IncidentId = incidentId.ToString(),
+                    UnitId = unitId.ToString(),
                     CreatedByUserId = createdByUserId?.ToString() ?? string.Empty,
                     AssignmentStatus = "4"
                 }

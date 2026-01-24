@@ -4,6 +4,8 @@ using System.Text.Json;
 using IncidentService.Services;
 using IncidentService.Enums;
 using Microsoft.Extensions.Hosting;
+using MediatR;
+using IncidentService.Application.Incident;
 
 namespace IncidentService.Messaging.Consumers;
 
@@ -119,6 +121,7 @@ public class DispatchEventConsumer : BackgroundService
             // Process the event
             using var scope = _serviceProvider.CreateScope();
             var incidentService = scope.ServiceProvider.GetRequiredService<IncidentSvc>();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
             if (dispatchEvent.Data == null || !Guid.TryParse(dispatchEvent.Data.IncidentId, out var incidentId))
             {
@@ -132,16 +135,36 @@ public class DispatchEventConsumer : BackgroundService
             {
                 "DispatchOrderCreated" => Status.Acknowledged,
                 "DispatchAssignmentCreated" => Status.InProgress,
+                // When an assignment is completed, mark the incident as completed/resolved.
+                // Enum values: InProgress = 2, Resolved = 3 (matches expected behavior).
+                "DispatchAssignmentCompleted" => Status.Resolved,
                 "DispatchOrderCompleted" => Status.Resolved,
                 _ => throw new InvalidOperationException($"Unknown event type: {dispatchEvent.EventType}")
             };
 
             // Get the incident to update
             var incident = await incidentService.GetIncidentById(incidentId);
+
+            // Keep track of assigned units when an assignment is created
+            // (DispatchService now includes UnitId in the event payload).
+            var updatedAssignedUnits = incident.AssignedUnits?.ToList() ?? new List<Guid>();
+            if (dispatchEvent.EventType == "DispatchAssignmentCreated")
+            {
+                if (Guid.TryParse(dispatchEvent.Data.UnitId, out var unitId))
+                {
+                    if (!updatedAssignedUnits.Contains(unitId))
+                        updatedAssignedUnits.Add(unitId);
+                }
+                else
+                {
+                    _logger.LogWarning("DispatchAssignmentCreated missing/invalid UnitId. AssignedUnits will not be updated.");
+                }
+            }
             
-            // Update status using the Update command pattern
+            // Update status using the Update command pattern via MediatR
+            // This ensures IncidentUpdated event is published so DispatchService can sync the status.
             // Note: Update.Command requires Title, Description, Latitude, Longitude per validator
-            var updateCommand = new Application.Incident.Update.Command
+            var updateCommand = new Update.Command
             {
                 ID = incidentId,
                 Title = incident.Title,
@@ -153,14 +176,18 @@ public class DispatchEventConsumer : BackgroundService
                 Longitude = incident.Longitude,
                 Severity = incident.Severity.ToString(),
                 Status = newStatus.ToString(),
-                AssignedUnits = incident.AssignedUnits,
+                AssignedUnits = updatedAssignedUnits,
+                ResolvedAt = dispatchEvent.EventType == "DispatchAssignmentCompleted"
+                    ? (dispatchEvent.Timestamp == default ? DateTime.UtcNow : dispatchEvent.Timestamp)
+                    : incident.ResolvedAt,
                 Updates = null, // Updates are not modified here
                 Metadata = incident.Metadata
             };
 
-            await incidentService.UpdateIncidentById(incidentId, updateCommand, null, cancellationToken);
+            // Use MediatR to send the command - this triggers the Handler which publishes IncidentUpdated event
+            await mediator.Send(updateCommand, cancellationToken);
             
-            _logger.LogInformation("Updated incident {IncidentId} status to {Status} based on {EventType}", 
+            _logger.LogInformation("Updated incident {IncidentId} status to {Status} based on {EventType}. IncidentUpdated event published.", 
                 incidentId, newStatus, dispatchEvent.EventType);
 
             // Delete the message after successful processing
@@ -205,5 +232,6 @@ public class DispatchEventConsumer : BackgroundService
         public string DispatchOrderId { get; set; } = string.Empty;
         public string DispatchAssignmentId { get; set; } = string.Empty;
         public string IncidentId { get; set; } = string.Empty;
+        public string UnitId { get; set; } = string.Empty;
     }
 }

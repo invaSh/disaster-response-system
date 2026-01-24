@@ -8,6 +8,7 @@ using AutoMapper;
 using System.Reflection;
 using FluentValidation;
 using IncidentService.Middlewares;
+using IncidentService.Helpers;
 using Shared.Extensions;
 using Microsoft.AspNetCore.Http;
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +38,9 @@ builder.Services.AddSwaggerGen(c =>
     // Custom schema IDs
     c.CustomSchemaIds(type =>
         type.FullName!.Replace("+", "."));
+    
+    // Ensure enums are shown as strings with dropdown values
+    c.SchemaFilter<EnumSchemaFilter>();
     
     // API Info
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
