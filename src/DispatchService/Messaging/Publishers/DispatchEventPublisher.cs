@@ -8,9 +8,10 @@ namespace DispatchService.Messaging.Publishers;
 
 public interface IDispatchEventPublisher
 {
-    Task PublishDispatchOrderCreatedAsync(Guid dispatchOrderId, Guid incidentId);
-    Task PublishDispatchAssignmentCreatedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId);
-    Task PublishDispatchOrderCompletedAsync(Guid dispatchOrderId, Guid incidentId);
+    Task PublishDispatchOrderCreatedAsync(Guid dispatchOrderId, Guid incidentId, Guid? createdByUserId);
+    Task PublishDispatchAssignmentCreatedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid unitId, Guid? createdByUserId);
+    Task PublishDispatchAssignmentCompletedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid unitId, Guid? createdByUserId);
+    Task PublishDispatchOrderCompletedAsync(Guid dispatchOrderId, Guid incidentId, Guid? createdByUserId);
 }
 
 public class DispatchEventPublisher : IDispatchEventPublisher
@@ -29,7 +30,7 @@ public class DispatchEventPublisher : IDispatchEventPublisher
         _logger = logger;
     }
 
-    public async Task PublishDispatchOrderCreatedAsync(Guid dispatchOrderId, Guid incidentId)
+    public async Task PublishDispatchOrderCreatedAsync(Guid dispatchOrderId, Guid incidentId, Guid? createdByUserId)
     {
         try
         {
@@ -56,7 +57,8 @@ public class DispatchEventPublisher : IDispatchEventPublisher
                 Data = new
                 {
                     DispatchOrderId = dispatchOrderId.ToString(),
-                    IncidentId = incidentId.ToString()
+                    IncidentId = incidentId.ToString(),
+                    CreatedByUserId = createdByUserId?.ToString() ?? string.Empty
                 }
             };
 
@@ -92,7 +94,7 @@ public class DispatchEventPublisher : IDispatchEventPublisher
         }
     }
 
-    public async Task PublishDispatchAssignmentCreatedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId)
+    public async Task PublishDispatchAssignmentCreatedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid unitId, Guid? createdByUserId)
     {
         try
         {
@@ -120,7 +122,11 @@ public class DispatchEventPublisher : IDispatchEventPublisher
                 {
                     DispatchAssignmentId = dispatchAssignmentId.ToString(),
                     DispatchOrderId = dispatchOrderId.ToString(),
-                    IncidentId = incidentId.ToString()
+                    IncidentId = incidentId.ToString(),
+                    UnitId = unitId.ToString(),
+                    CreatedByUserId = createdByUserId?.ToString() ?? string.Empty,
+                    // AssignmentStatus enum value on creation is Assigned = 1
+                    AssignmentStatus = "1"
                 }
             };
 
@@ -156,7 +162,74 @@ public class DispatchEventPublisher : IDispatchEventPublisher
         }
     }
 
-    public async Task PublishDispatchOrderCompletedAsync(Guid dispatchOrderId, Guid incidentId)
+    public async Task PublishDispatchAssignmentCompletedAsync(Guid dispatchAssignmentId, Guid dispatchOrderId, Guid incidentId, Guid unitId, Guid? createdByUserId)
+    {
+        try
+        {
+            var topicName = _configuration["AWS:SNS:DispatchEventsTopic"] ?? "dispatch-events-topic";
+            
+            var topicsResponse = await _snsClient.ListTopicsAsync();
+            var topicArn = topicsResponse.Topics
+                .FirstOrDefault(t => t.TopicArn.Contains(topicName))?.TopicArn;
+
+            if (topicArn == null)
+            {
+                _logger.LogWarning("SNS topic '{TopicName}' not found. Attempting to create it.", topicName);
+                var createTopicResponse = await _snsClient.CreateTopicAsync(new CreateTopicRequest
+                {
+                    Name = topicName
+                });
+                topicArn = createTopicResponse.TopicArn;
+            }
+
+            var eventMessage = new
+            {
+                EventType = "DispatchAssignmentCompleted",
+                Timestamp = DateTime.UtcNow,
+                Data = new
+                {
+                    DispatchAssignmentId = dispatchAssignmentId.ToString(),
+                    DispatchOrderId = dispatchOrderId.ToString(),
+                    IncidentId = incidentId.ToString(),
+                    UnitId = unitId.ToString(),
+                    CreatedByUserId = createdByUserId?.ToString() ?? string.Empty,
+                    AssignmentStatus = "4"
+                }
+            };
+
+            var messageBody = JsonSerializer.Serialize(eventMessage, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            var publishRequest = new PublishRequest
+            {
+                TopicArn = topicArn,
+                Message = messageBody,
+                MessageAttributes = new Dictionary<string, MessageAttributeValue>
+                {
+                    {
+                        "EventType",
+                        new MessageAttributeValue
+                        {
+                            DataType = "String",
+                            StringValue = "DispatchAssignmentCompleted"
+                        }
+                    }
+                }
+            };
+
+            await _snsClient.PublishAsync(publishRequest);
+            _logger.LogInformation("Published DispatchAssignmentCompleted event for assignment {DispatchAssignmentId}, dispatch order {DispatchOrderId}, incident {IncidentId}", 
+                dispatchAssignmentId, dispatchOrderId, incidentId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to publish DispatchAssignmentCompleted event for assignment {DispatchAssignmentId}", dispatchAssignmentId);
+        }
+    }
+
+    public async Task PublishDispatchOrderCompletedAsync(Guid dispatchOrderId, Guid incidentId, Guid? createdByUserId)
     {
         try
         {
@@ -183,7 +256,8 @@ public class DispatchEventPublisher : IDispatchEventPublisher
                 Data = new
                 {
                     DispatchOrderId = dispatchOrderId.ToString(),
-                    IncidentId = incidentId.ToString()
+                    IncidentId = incidentId.ToString(),
+                    CreatedByUserId = createdByUserId?.ToString() ?? string.Empty
                 }
             };
 

@@ -139,7 +139,8 @@ public class IncidentEventConsumer : BackgroundService
                     Title = incidentEvent.Data.Title,
                     Type = incidentEvent.Data.Type,
                     Severity = incidentEvent.Data.Severity,
-                    Status = "Active",
+                    // Match IncidentService Status enum: Open, Acknowledged, InProgress, Resolved, Closed
+                    Status = incidentEvent.Data.Status ?? "Open",
                     Latitude = incidentEvent.Data.Latitude,
                     Longitude = incidentEvent.Data.Longitude,
                     ReportedAt = DateTime.UtcNow,
@@ -200,6 +201,7 @@ public class IncidentEventConsumer : BackgroundService
         public string? Description { get; set; }
         public string Type { get; set; } = string.Empty;
         public string Severity { get; set; } = string.Empty;
+        public string? Status { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public Guid? CreatedByUserId { get; set; }

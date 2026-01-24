@@ -84,12 +84,18 @@ namespace NotificationService.Application.Notifications
         public class Handler : IRequestHandler<Command, NotificationDTO>
         {
             private readonly NotificationSvc _notificationService;
+            private readonly IEmailSender _emailSender;
             private readonly IMapper _mapper;
             private readonly IValidator<Command> _validator;
 
-            public Handler(NotificationSvc notificationService, IMapper mapper, IValidator<Command> validator)
+            public Handler(
+                NotificationSvc notificationService,
+                IEmailSender emailSender,
+                IMapper mapper,
+                IValidator<Command> validator)
             {
                 _notificationService = notificationService;
+                _emailSender = emailSender;
                 _mapper = mapper;
                 _validator = validator;
             }
@@ -101,23 +107,25 @@ namespace NotificationService.Application.Notifications
                 {
                     var errors = validationResult.Errors
                         .GroupBy(e => e.PropertyName)
-                        .ToDictionary(
-                            g => g.Key,
-                            g => g.Select(e => e.ErrorMessage).ToArray()
-                        );
+                        .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
 
-                    throw new StatusException(
-                        HttpStatusCode.BadRequest,
-                        "ValidationError",
-                        "Validation failed",
-                        errors
-                    );
+                    throw new StatusException(HttpStatusCode.BadRequest, "ValidationError", "Validation failed", errors);
                 }
 
+                // 1) ruaje ne DB
                 var notification = await _notificationService.CreateNotification(request, cancellationToken);
+
+                // 2) TEST: dergo email te TI (per momentin)
+                await _emailSender.SendAsync(
+                    "festimdibrani9@gmail.com",
+                    request.Title,
+                    request.Message,
+                    cancellationToken
+                );
 
                 return _mapper.Map<NotificationDTO>(notification);
             }
         }
+
     }
 }

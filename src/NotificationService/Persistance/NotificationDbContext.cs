@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using NotificationService.Domain;
 
 namespace NotificationService.Persistance

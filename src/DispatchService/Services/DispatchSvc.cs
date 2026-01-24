@@ -138,7 +138,13 @@ namespace DispatchService.Services
                 await _context.SaveChangesAsync(ct);
 
                 // Publish event for incident status update
-                _ = Task.Run(async () => await _eventPublisher.PublishDispatchOrderCreatedAsync(order.Id, order.IncidentId), ct);
+                var incidentCreatorUserId = await _context.Incidents
+                    .AsNoTracking()
+                    .Where(i => i.Id == order.IncidentId)
+                    .Select(i => i.CreatedByUserId)
+                    .FirstOrDefaultAsync(ct);
+
+                _ = Task.Run(async () => await _eventPublisher.PublishDispatchOrderCreatedAsync(order.Id, order.IncidentId, incidentCreatorUserId), ct);
 
                 return _mapper.Map<DispatchOrderDetailsDTO>(order);
             }
@@ -330,7 +336,18 @@ namespace DispatchService.Services
                 await _context.SaveChangesAsync(ct);
 
                 // Publish event for incident status update
-                _ = Task.Run(async () => await _eventPublisher.PublishDispatchAssignmentCreatedAsync(assignment.Id, dispatchOrderId, order.IncidentId), ct);
+                var incidentCreatorUserId = await _context.Incidents
+                    .AsNoTracking()
+                    .Where(i => i.Id == order.IncidentId)
+                    .Select(i => i.CreatedByUserId)
+                    .FirstOrDefaultAsync(ct);
+
+                _ = Task.Run(async () => await _eventPublisher.PublishDispatchAssignmentCreatedAsync(
+                    assignment.Id,
+                    dispatchOrderId,
+                    order.IncidentId,
+                    assignment.UnitId,
+                    incidentCreatorUserId), ct);
 
                 var assignmentWithUnit = await _context.DispatchAssignments
                     .Include(a => a.Unit)
@@ -386,15 +403,54 @@ namespace DispatchService.Services
                     assignment.DispatchOrder.CompletedAt = DateTime.UtcNow;
                     
                     await _context.SaveChangesAsync(ct);
+
+                    // Notify user when assignment is completed (AssignmentStatus = 4)
+                    if (dto.Status == AssignmentStatus.Completed)
+                    {
+                        var incidentCreatorUserId = await _context.Incidents
+                            .AsNoTracking()
+                            .Where(i => i.Id == assignment.DispatchOrder.IncidentId)
+                            .Select(i => i.CreatedByUserId)
+                            .FirstOrDefaultAsync(ct);
+
+                        _ = Task.Run(async () => await _eventPublisher.PublishDispatchAssignmentCompletedAsync(
+                            assignment.Id,
+                            assignment.DispatchOrder.Id,
+                            assignment.DispatchOrder.IncidentId,
+                            assignment.UnitId,
+                            incidentCreatorUserId), ct);
+                    }
                     
                     // Publish event for incident status update
                     _ = Task.Run(async () => await _eventPublisher.PublishDispatchOrderCompletedAsync(
                         assignment.DispatchOrder.Id, 
-                        assignment.DispatchOrder.IncidentId), ct);
+                        assignment.DispatchOrder.IncidentId,
+                        (await _context.Incidents.AsNoTracking()
+                            .Where(i => i.Id == assignment.DispatchOrder.IncidentId)
+                            .Select(i => i.CreatedByUserId)
+                            .FirstOrDefaultAsync(ct))
+                        ), ct);
                 }
                 else
                 {
                     await _context.SaveChangesAsync(ct);
+
+                    // Notify user when assignment is completed (AssignmentStatus = 4)
+                    if (dto.Status == AssignmentStatus.Completed)
+                    {
+                        var incidentCreatorUserId = await _context.Incidents
+                            .AsNoTracking()
+                            .Where(i => i.Id == assignment.DispatchOrder.IncidentId)
+                            .Select(i => i.CreatedByUserId)
+                            .FirstOrDefaultAsync(ct);
+
+                        _ = Task.Run(async () => await _eventPublisher.PublishDispatchAssignmentCompletedAsync(
+                            assignment.Id,
+                            assignment.DispatchOrder.Id,
+                            assignment.DispatchOrder.IncidentId,
+                            assignment.UnitId,
+                            incidentCreatorUserId), ct);
+                    }
                 }
 
                 return _mapper.Map<DispatchAssignmentDTO>(assignment);

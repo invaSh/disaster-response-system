@@ -17,7 +17,7 @@ namespace IncidentService.Application.Incident
         {
             public string Title { get; set; }
             public string Description { get; set; }
-            public string Type { get; set; }
+            public IncidentType Type { get; set; }
 
             public string? ReporterName { get; set; }
             public string? ReporterContact { get; set; }
@@ -25,7 +25,7 @@ namespace IncidentService.Application.Incident
             public double Latitude { get; set; }
             public double Longitude { get; set; }
 
-            public string Severity { get; set; }
+            public Enums.Severity Severity { get; set; }
 
             public List<IFormFile>? MediaFiles { get; set; }
 
@@ -47,12 +47,10 @@ namespace IncidentService.Application.Incident
                 RuleFor(x => x.Longitude).NotEmpty().WithMessage("Longitude is required");
 
                 RuleFor(x => x.Type)
-                    .Must(BeValidIncidentType).WithMessage("Invalid incident category")
-                    .When(x => !string.IsNullOrWhiteSpace(x.Type));
+                    .Must(BeValidIncidentType).WithMessage("Invalid incident category");
 
                 RuleFor(x => x.Severity)
-                    .Must(BeValidSeverity).WithMessage("Invalid severity category.")
-                    .When(x => !string.IsNullOrWhiteSpace(x.Severity));
+                    .Must(BeValidSeverity).WithMessage("Invalid severity category.");
 
                 RuleFor(x => x.ReporterName)
                      .Must(x => x == null || !string.IsNullOrWhiteSpace(x))
@@ -64,14 +62,14 @@ namespace IncidentService.Application.Incident
 
             }
 
-            private bool BeValidIncidentType(string type)
+            private bool BeValidIncidentType(IncidentType type)
             {
-                return Enum.TryParse<IncidentType>(type, true, out _);
+                return Enum.IsDefined(typeof(IncidentType), type);
             }
 
-            private bool BeValidSeverity(string severity)
+            private bool BeValidSeverity(Enums.Severity severity)
             {
-                return Enum.TryParse<Enums.Severity>(severity, true, out _);
+                return Enum.IsDefined(typeof(Enums.Severity), severity);
             }
         }
 
