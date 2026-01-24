@@ -42,9 +42,13 @@ namespace IncidentService.Application.Incident
                 RuleFor(x => x.Description)
                     .NotEmpty().WithMessage("Description is required.");
 
-                RuleFor(x => x.Latitude).NotEmpty().WithMessage("Latitude is required");
+                RuleFor(x => x.Latitude)
+                    .NotNull().WithMessage("Latitude is required.")
+                    .InclusiveBetween(-90, 90).WithMessage("Latitude must be between -90 and 90 degrees.");
 
-                RuleFor(x => x.Longitude).NotEmpty().WithMessage("Longitude is required");
+                RuleFor(x => x.Longitude)
+                    .NotNull().WithMessage("Longitude is required.")
+                    .InclusiveBetween(-180, 180).WithMessage("Longitude must be between -180 and 180 degrees.");
 
                 RuleFor(x => x.Type)
                     .Must(BeValidIncidentType).WithMessage("Invalid incident category");
@@ -53,8 +57,8 @@ namespace IncidentService.Application.Incident
                     .Must(BeValidSeverity).WithMessage("Invalid severity category.");
 
                 RuleFor(x => x.ReporterName)
-                     .Must(x => x == null || !string.IsNullOrWhiteSpace(x))
-                     .WithMessage("Reporter name must be a valid string.");
+                    .Must(x => x == null || !string.IsNullOrWhiteSpace(x))
+                    .WithMessage("Reporter name must be a valid string.");
 
                 RuleFor(x => x.ReporterContact)
                     .Must(x => x == null || !string.IsNullOrWhiteSpace(x))
@@ -123,7 +127,6 @@ namespace IncidentService.Application.Incident
                 var incident = await _incidentService.CreateIncident(request, _s3Service, cancellationToken);
                 var incidentDto = _mapper.Map<IncidentDTO>(incident);
 
-                // Ensure CreatedByUserId is included in the DTO
                 if (incident.CreatedByUserId.HasValue && !incidentDto.CreatedByUserId.HasValue)
                 {
                     incidentDto.CreatedByUserId = incident.CreatedByUserId;

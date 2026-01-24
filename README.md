@@ -1,3 +1,21 @@
+# Disaster Response System Documentation
+
+## 🚀 Quick Start with Docker
+
+**New to Docker?** Check out our comprehensive [Docker Setup Guide](DOCKER_SETUP.md) for step-by-step instructions.
+
+**Already familiar with Docker?** Just run:
+```bash
+docker compose up --build
+```
+
+Then access the services:
+- Auth Service: http://localhost:5245/swagger
+- Incident Service: http://localhost:4001/swagger
+- Dispatch Service: http://localhost:4002/swagger
+- Notification Service: http://localhost:5252/swagger
+
+---
 
 # Disaster Response System Documentation
 

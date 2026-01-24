@@ -1,4 +1,26 @@
+version: '3.8'
+
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: disaster_response_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - disaster_response_network
+
   localstack:
     container_name: localstack_main
     image: localstack/localstack:latest
@@ -7,5 +29,119 @@ services:
     environment:
       - DEBUG=1
       - DOCKER_HOST=unix:///var/run/docker.sock
+      - SERVICES=s3,sqs,sns
     volumes:
       - "./init-aws:/etc/localstack/init/ready.d"
+    networks:
+      - disaster_response_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: src/AuthService/Dockerfile
+    container_name: disaster_response_auth
+    ports:
+      - "5245:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__AuthenticationDatabase=Host=postgres;Port=5432;Database=auth;Username=postgres;Password=123456
+      - Jwt__Key=KyEshtNjëSecretKeyShumëIFortë123!
+      - Jwt__Issuer=MyAuthServer
+      - Jwt__Audience=MyAuthClient
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - disaster_response_network
+
+  incident-service:
+    build:
+      context: .
+      dockerfile: src/IncidentService/Dockerfile
+    container_name: disaster_response_incident
+    ports:
+      - "4001:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__IncidentDatabase=Host=postgres;Port=5432;Database=incidents;Username=postgres;Password=123456
+      - AWS__ServiceURL=http://localstack:4566
+      - AWS__Region=us-east-1
+      - AWS__S3__BucketName=incident-attachments
+      - AWS__SNS__IncidentCreatedTopic=incident-created-topic
+      - AWS__SNS__IncidentUpdatedTopic=incident-updated-topic
+      - AWS__SNS__IncidentDeletedTopic=incident-deleted-topic
+      - Jwt__Key=KyEshtNjëSecretKeyShumëIFortë123!
+      - Jwt__Issuer=MyAuthServer
+      - Jwt__Audience=MyAuthClient
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    networks:
+      - disaster_response_network
+
+  dispatch-service:
+    build:
+      context: .
+      dockerfile: src/DispatchService/Dockerfile
+    container_name: disaster_response_dispatch
+    ports:
+      - "4002:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DispatchDatabase=Host=postgres;Port=5432;Database=dispatch;Username=postgres;Password=123456
+      - AWS__ServiceURL=http://localstack:4566
+      - AWS__Region=us-east-1
+      - AWS__SQS__QueueName=dispatch-incident-queue
+      - AWS__SQS__UpdatedQueueName=dispatch-incident-updated-queue
+      - AWS__SQS__DeletedQueueName=dispatch-incident-deleted-queue
+      - Jwt__Key=KyEshtNjëSecretKeyShumëIFortë123!
+      - Jwt__Issuer=MyAuthServer
+      - Jwt__Audience=MyAuthClient
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    networks:
+      - disaster_response_network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: src/NotificationService/Dockerfile
+    container_name: disaster_response_notification
+    ports:
+      - "5252:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__NotificationDatabase=Host=postgres;Port=5432;Database=notifications;Username=postgres;Password=123456
+      - AWS__ServiceURL=http://localstack:4566
+      - AWS__Region=us-east-1
+      - AWS__SQS__QueueName=notification-incident-queue
+      - AWS__SQS__UpdatedQueueName=notification-incident-updated-queue
+      - AWS__SQS__DeletedQueueName=notification-incident-deleted-queue
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    networks:
+      - disaster_response_network
+
+volumes:
+  postgres_data:
+
+networks:
+  disaster_response_network:
+    driver: bridge
