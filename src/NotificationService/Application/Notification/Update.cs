@@ -1,8 +1,7 @@
-﻿using AutoMapper;
+using AutoMapper;
 using FluentValidation;
 using MediatR;
 using NotificationService.DTOs.NotificationService.DTOs;
-using NotificationService.Middlewares;
 using NotificationService.Helpers;
 using NotificationService.Services;
 using System.Net;

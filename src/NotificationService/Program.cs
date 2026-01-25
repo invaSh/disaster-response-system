@@ -4,6 +4,7 @@ using NotificationService.Persistance;
 using MediatR;
 using NotificationService.Services;
 using NotificationService.Messaging.Consumers;
+using NotificationService.Middlewares;
 using AutoMapper;
 using FluentValidation;
 using System.Reflection;
@@ -63,6 +64,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NotificationService.DTOs.NotificationService.DTOs;
 using NotificationService.Helpers;
@@ -34,10 +34,7 @@ namespace NotificationService.Application.Notification
                         HttpStatusCode.NotFound,
                         "NotFound",
                         "Notification not found",
-                        new Dictionary<string, string[]>
-                        {
-                            { "id", new[] { "Notification with this id was not found." } }
-                        }
+                        new { Id = "Notification does not exist." }
                     );
                 }
 

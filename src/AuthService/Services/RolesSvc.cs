@@ -1,7 +1,9 @@
 using AuthService.Persistence;
 using AuthService.Domain;
 using AuthService.Enums;
+using AuthService.Helpers;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 
 namespace AuthService.Services
 {
@@ -15,30 +17,44 @@ namespace AuthService.Services
             return await _context.Roles.ToListAsync();
         }
 
-        public async Task<Role?> GetRoleByIdAsync(Guid id)
+        public async Task<Role> GetRoleByIdAsync(Guid id)
         {
-            return await _context.Roles.FindAsync(id);
+            var role = await _context.Roles.FindAsync(id);
+            if (role == null)
+                throw new StatusException(HttpStatusCode.NotFound, "NotFound", "Role not found.", new { Id = "Role does not exist." });
+            return role;
         }
 
         public async Task<Role> CreateRoleAsync(string name, RoleType roleType)
         {
-            // Validate RoleType is either Admin (1) 
-            if (roleType != RoleType.Admin)
-                throw new Exception("RoleType must be  Admin (1) ");
-
-            var existing = await _context.Roles.FirstOrDefaultAsync(r => r.Name == name);
-            if (existing != null)
-                throw new Exception("Role with this name already exists.");
-
-            var role = new Role
+            try
             {
-                Name = name,
-                RoleType = roleType
-            };
+                // Validate RoleType is either Admin (1) 
+                if (roleType != RoleType.Admin)
+                    throw new StatusException(HttpStatusCode.BadRequest, "ValidationError", "RoleType must be Admin (1)", new { RoleType = "Invalid role type." });
 
-            _context.Roles.Add(role);
-            await _context.SaveChangesAsync();
-            return role;
+                var existing = await _context.Roles.FirstOrDefaultAsync(r => r.Name == name);
+                if (existing != null)
+                    throw new StatusException(HttpStatusCode.Conflict, "Duplicate", "Role with this name already exists.", new { Name = "Role name must be unique." });
+
+                var role = new Role
+                {
+                    Name = name,
+                    RoleType = roleType
+                };
+
+                _context.Roles.Add(role);
+                await _context.SaveChangesAsync();
+                return role;
+            }
+            catch (StatusException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw HelperService.MapToStatusException(ex);
+            }
         }
 
         public async Task<bool> DeleteRoleAsync(Guid id)
@@ -54,31 +70,42 @@ namespace AuthService.Services
 
         public async Task<Role?> UpdateRoleAsync(Guid id, string? name, RoleType? roleType)
         {
-            var role = await _context.Roles.FindAsync(id);
-            if (role == null)
-                return null;
-
-            if (name != null)
+            try
             {
-                // Check if name is already taken by another role
-                var existing = await _context.Roles.FirstOrDefaultAsync(r => r.Name == name && r.Id != id);
-                if (existing != null)
-                    throw new Exception("Role with this name already exists.");
+                var role = await _context.Roles.FindAsync(id);
+                if (role == null)
+                    throw new StatusException(HttpStatusCode.NotFound, "NotFound", "Role not found.", new { Id = "Role does not exist." });
 
-                role.Name = name;
+                if (name != null)
+                {
+                    // Check if name is already taken by another role
+                    var existing = await _context.Roles.FirstOrDefaultAsync(r => r.Name == name && r.Id != id);
+                    if (existing != null)
+                        throw new StatusException(HttpStatusCode.Conflict, "Duplicate", "Role with this name already exists.", new { Name = "Role name must be unique." });
+
+                    role.Name = name;
+                }
+
+                if (roleType.HasValue)
+                {
+                    // Validate RoleType is either Admin (1) or User (2)
+                    if (roleType.Value != RoleType.Admin)
+                        throw new StatusException(HttpStatusCode.BadRequest, "ValidationError", "RoleType must be Admin (1)", new { RoleType = "Invalid role type." });
+
+                    role.RoleType = roleType.Value;
+                }
+
+                await _context.SaveChangesAsync();
+                return role;
             }
-
-            if (roleType.HasValue)
+            catch (StatusException)
             {
-                // Validate RoleType is either Admin (1) or User (2)
-                if (roleType.Value != RoleType.Admin)
-                    throw new Exception("RoleType must be either Admin (1) ");
-
-                role.RoleType = roleType.Value;
+                throw;
             }
-
-            await _context.SaveChangesAsync();
-            return role;
+            catch (Exception ex)
+            {
+                throw HelperService.MapToStatusException(ex);
+            }
         }
     }
 }

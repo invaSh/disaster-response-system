@@ -1,4 +1,4 @@
-﻿using AuthService.DTOs;
+using AuthService.DTOs;
 using AuthService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,84 +43,54 @@ namespace AuthService.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetUserById(Guid id)
         {
-            try
+            var user = await _userService.GetUserByIdAsync(id);
+            var userDTO = new UserDTO
             {
-                var user = await _userService.GetUserByIdAsync(id);
-                if (user == null)
-                    return NotFound(new { message = "User not found." });
+                Id = user.Id,
+                Email = user.Email,
+                Status = user.Status
+            };
 
-                var userDTO = new UserDTO
-                {
-                    Id = user.Id,
-                    Email = user.Email,
-                    Status = user.Status
-                };
-
-                return Ok(userDTO);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while retrieving the user.", error = ex.Message });
-            }
+            return Ok(userDTO);
         }
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUser(Guid id)
         {
-            try
-            {
-                var deleted = await _userService.DeleteUserAsync(id);
-                if (!deleted)
-                    return NotFound(new { message = "User not found." });
-
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while deleting the user.", error = ex.Message });
-            }
+            await _userService.DeleteUserAsync(id);
+            return NoContent();
         }
 
         [HttpPut("{id}")]
         [Authorize]
         public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserRequestDTO request)
         {
-            try
+            // Get the current user's ID from the JWT token (stored as "sub" claim)
+            var currentUserIdClaim = User.FindFirst("sub") 
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            
+            if (currentUserIdClaim == null || !Guid.TryParse(currentUserIdClaim.Value, out var currentUserId))
             {
-                // Get the current user's ID from the JWT token (stored as "sub" claim)
-                var currentUserIdClaim = User.FindFirst("sub") 
-                    ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-                
-                if (currentUserIdClaim == null || !Guid.TryParse(currentUserIdClaim.Value, out var currentUserId))
-                {
-                    return Unauthorized(new { message = "Invalid user token." });
-                }
-
-                // Check if user is Admin OR updating their own profile
-                var isAdmin = User.IsInRole("Admin");
-                if (!isAdmin && currentUserId != id)
-                {
-                    return Forbid("You can only update your own profile.");
-                }
-
-                var user = await _userService.UpdateUserAsync(id, request.Email, request.Status);
-                if (user == null)
-                    return NotFound(new { message = "User not found." });
-
-                var userDTO = new UserDTO
-                {
-                    Id = user.Id,
-                    Email = user.Email,
-                    Status = user.Status
-                };
-
-                return Ok(userDTO);
+                return Unauthorized(new { message = "Invalid user token." });
             }
-            catch (Exception ex)
+
+            // Check if user is Admin OR updating their own profile
+            var isAdmin = User.IsInRole("Admin");
+            if (!isAdmin && currentUserId != id)
             {
-                return StatusCode(500, new { message = "An error occurred while updating the user.", error = ex.Message });
+                return Forbid("You can only update your own profile.");
             }
+
+            var user = await _userService.UpdateUserAsync(id, request.Email, request.Status);
+            var userDTO = new UserDTO
+            {
+                Id = user.Id,
+                Email = user.Email,
+                Status = user.Status
+            };
+
+            return Ok(userDTO);
         }
     }
 }
