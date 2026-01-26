@@ -64,9 +64,7 @@ namespace NotificationService.Controllers
             return Ok(new { message = "Notification deleted successfully" });
         }
 
-        // No payload endpoint:
-        // POST api/notification/{incidentId}
-        // Creates a notification for the current user, referencing the incidentId.
+
         [HttpPost("{incidentId:guid}")]
         [Authorize(Roles = "Admin,IncMan,User")]
         public async Task<IActionResult> CreateForIncident(Guid incidentId, CancellationToken ct)

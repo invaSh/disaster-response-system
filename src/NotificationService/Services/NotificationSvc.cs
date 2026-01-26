@@ -23,8 +23,7 @@ namespace NotificationService.Services
 
         private async Task<string> GetIncidentSeverityAsync(string incidentReferenceId, CancellationToken ct)
         {
-            // We cannot use Dictionary.ContainsKey / indexer in an EF query here (not translatable).
-            // So we load a small set of notifications for this incident and filter metadata in-memory.
+            // Perdorim small set of notifs per incident dhe filtrojme
             var notifications = await _context.Notifications
                 .AsNoTracking()
                 .Where(n => n.ReferenceType == "Incident" && n.ReferenceId == incidentReferenceId)
@@ -73,7 +72,7 @@ namespace NotificationService.Services
             }
         }
 
-        // Event-driven helper: Incident created -> notify the incident creator user
+        // Event-driven helper
         public async Task<Notification> CreateIncidentCreatedNotification(
             Guid createdByUserId,
             string incidentDbId,
@@ -114,7 +113,7 @@ namespace NotificationService.Services
             return notification;
         }
 
-        // API helper: no payload, caller provides incidentId, we notify current user.
+        // API helper
         public async Task<Notification> CreateIncidentSeenNotification(
             Guid incidentId,
             Guid userId,
