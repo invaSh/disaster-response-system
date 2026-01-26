@@ -126,22 +126,20 @@ public class IncidentUpdatedConsumer : BackgroundService
                 return;
             }
 
-            // Process the event - update cached incident and dispatch order
+            // update cached incident dhe dispatch order
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<DispatchService.Persistance.DispatchDbContext>();
             var dispatchService = scope.ServiceProvider.GetRequiredService<DispatchSvc>();
 
-            // First, get the cached incident data to compare changes
+            // krahasimi i vlerave tvjetra me kto t'rejat qe po dojne me u bo update
             var cachedIncident = await dbContext.Incidents.FindAsync(new object[] { incidentId }, cancellationToken);
             
-            // Store old values for comparison before updating
             var oldStatus = cachedIncident?.Status ?? string.Empty;
             var oldSeverity = cachedIncident?.Severity ?? string.Empty;
             var oldTitle = cachedIncident?.Title ?? string.Empty;
             var oldLatitude = cachedIncident?.Latitude ?? 0;
             var oldLongitude = cachedIncident?.Longitude ?? 0;
 
-            // Update the cached incident data
             if (cachedIncident != null)
             {
                 if (!string.IsNullOrEmpty(incidentEvent.Data.Title))
@@ -170,13 +168,11 @@ public class IncidentUpdatedConsumer : BackgroundService
 
             try
             {
-                // Get the dispatch order for this incident (if it exists)
                 var dispatchOrder = await dispatchService.GetDispatchOrderByIncidentId(incidentId, cancellationToken);
                 
                 var notesUpdates = new List<string>();
                 var hasChanges = false;
 
-                // Handle status changes - only if it actually changed
                 if (!string.IsNullOrEmpty(incidentEvent.Data.Status) && 
                     !incidentEvent.Data.Status.Equals(oldStatus, StringComparison.OrdinalIgnoreCase))
                 {
@@ -191,7 +187,6 @@ public class IncidentUpdatedConsumer : BackgroundService
                     }
                 }
 
-                // Handle location changes - only if it actually changed
                 if (incidentEvent.Data.Latitude != 0 && incidentEvent.Data.Longitude != 0 &&
                     (Math.Abs(incidentEvent.Data.Latitude - oldLatitude) > 0.0001 || 
                      Math.Abs(incidentEvent.Data.Longitude - oldLongitude) > 0.0001))
@@ -200,7 +195,6 @@ public class IncidentUpdatedConsumer : BackgroundService
                     hasChanges = true;
                 }
 
-                // Handle severity changes - only if it actually changed
                 if (!string.IsNullOrEmpty(incidentEvent.Data.Severity) && 
                     !incidentEvent.Data.Severity.Equals(oldSeverity, StringComparison.OrdinalIgnoreCase))
                 {
@@ -208,7 +202,6 @@ public class IncidentUpdatedConsumer : BackgroundService
                     hasChanges = true;
                 }
 
-                // Handle title changes - only if it actually changed
                 if (!string.IsNullOrEmpty(incidentEvent.Data.Title) && 
                     !incidentEvent.Data.Title.Equals(oldTitle, StringComparison.OrdinalIgnoreCase))
                 {
@@ -216,7 +209,6 @@ public class IncidentUpdatedConsumer : BackgroundService
                     hasChanges = true;
                 }
 
-                // Update dispatch order notes if there are actual changes
                 if (hasChanges && notesUpdates.Any())
                 {
                     var updateDto = new UpdateDispatchOrderRequestDTO
@@ -235,7 +227,6 @@ public class IncidentUpdatedConsumer : BackgroundService
             }
             catch (Exception ex) when (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
             {
-                // Dispatch order doesn't exist yet - this is fine, it will be created when incident is created
                 _logger.LogInformation("No dispatch order found for incident {IncidentId} - will be created on incident creation", incidentId);
             }
 
