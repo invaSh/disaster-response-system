@@ -8,7 +8,7 @@ namespace DispatchService.Domain
     {
         public Guid Id { get; set; }
 
-        // Incident relationship (cached from Incident Service)
+        // Incident relationship (cached prej Incident Service)
         public Guid IncidentId { get; set; }
         public Incident? Incident { get; set; }
 

@@ -125,7 +125,6 @@ public class DispatchEventPublisher : IDispatchEventPublisher
                     IncidentId = incidentId.ToString(),
                     UnitId = unitId.ToString(),
                     CreatedByUserId = createdByUserId?.ToString() ?? string.Empty,
-                    // AssignmentStatus enum value on creation is Assigned = 1
                     AssignmentStatus = "1"
                 }
             };

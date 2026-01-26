@@ -33,7 +33,7 @@ public class IncidentEventPublisher : IIncidentEventPublisher
         {
             var topicName = _configuration["AWS:SNS:IncidentCreatedTopic"] ?? "incident-created-topic";
             
-            // Get topic ARN by listing topics and finding the one that matches
+            // merre topic ARN
             var topicsResponse = await _snsClient.ListTopicsAsync();
             var topicArn = topicsResponse.Topics
                 .FirstOrDefault(t => t.TopicArn.Contains(topicName))?.TopicArn;
@@ -41,7 +41,7 @@ public class IncidentEventPublisher : IIncidentEventPublisher
             if (topicArn == null)
             {
                 _logger.LogWarning("SNS topic '{TopicName}' not found. Attempting to create it.", topicName);
-                // Try to create the topic if it doesn't exist
+                // krijoje topic nese nuk ekziston
                 var createTopicResponse = await _snsClient.CreateTopicAsync(new CreateTopicRequest
                 {
                     Name = topicName

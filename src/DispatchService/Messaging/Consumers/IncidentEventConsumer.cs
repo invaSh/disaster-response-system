@@ -42,7 +42,7 @@ public class IncidentEventConsumer : BackgroundService
                 {
                     QueueUrl = _queueUrl,
                     MaxNumberOfMessages = 10,
-                    WaitTimeSeconds = 20, // Long polling
+                    WaitTimeSeconds = 20, // long polling
                     MessageAttributeNames = new List<string> { "All" }
                 };
 
@@ -61,7 +61,7 @@ public class IncidentEventConsumer : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error receiving messages from SQS queue");
-                await Task.Delay(5000, stoppingToken); // Wait before retrying
+                await Task.Delay(5000, stoppingToken); // prit pak para se me retry
             }
         }
     }
@@ -79,7 +79,7 @@ public class IncidentEventConsumer : BackgroundService
         catch (QueueDoesNotExistException)
         {
             _logger.LogWarning("Queue {QueueName} does not exist. Will retry...", queueName);
-            // Queue will be created by setup script, so we'll retry
+            //  queue krijohet nga setup script, kshtu qe bojme retry
             await Task.Delay(5000, cancellationToken);
             await InitializeQueueAsync(cancellationToken);
         }
@@ -89,8 +89,6 @@ public class IncidentEventConsumer : BackgroundService
     {
         try
         {
-            // SNS messages are wrapped in SQS messages
-            // The actual message body is in the Message attribute when sent via SNS
             var snsMessage = JsonSerializer.Deserialize<SNSMessage>(message.Body, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -124,7 +122,7 @@ public class IncidentEventConsumer : BackgroundService
                 return;
             }
 
-            // Cache the incident data locally
+            // cache the incident data localisht
             using var scope = _serviceProvider.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<DispatchService.Persistance.DispatchDbContext>();
 
@@ -139,7 +137,7 @@ public class IncidentEventConsumer : BackgroundService
                     Title = incidentEvent.Data.Title,
                     Type = incidentEvent.Data.Type,
                     Severity = incidentEvent.Data.Severity,
-                    // Match IncidentService Status enum: Open, Acknowledged, InProgress, Resolved, Closed
+                    // match IncidentService Status enum, normal n'qat faze e ka "open"
                     Status = incidentEvent.Data.Status ?? "Open",
                     Latitude = incidentEvent.Data.Latitude,
                     Longitude = incidentEvent.Data.Longitude,
@@ -157,7 +155,6 @@ public class IncidentEventConsumer : BackgroundService
                 _logger.LogInformation("Incident {IncidentId} already exists in cache", incidentId);
             }
 
-            // Delete the message after successful processing
             await DeleteMessageAsync(message.ReceiptHandle);
         }
         catch (Exception ex)
@@ -178,7 +175,7 @@ public class IncidentEventConsumer : BackgroundService
         }
     }
 
-    // Helper classes for deserialization
+    // Helper classes per deserializim
     private class SNSMessage
     {
         public string Type { get; set; } = string.Empty;

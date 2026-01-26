@@ -41,7 +41,7 @@ public class IncidentEventConsumer : BackgroundService
                 {
                     QueueUrl = _queueUrl,
                     MaxNumberOfMessages = 10,
-                    WaitTimeSeconds = 20, // Long polling
+                    WaitTimeSeconds = 20, // long polling
                     MessageAttributeNames = new List<string> { "All" }
                 };
 
@@ -60,7 +60,7 @@ public class IncidentEventConsumer : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error receiving messages from SQS queue");
-                await Task.Delay(5000, stoppingToken); // Wait before retrying
+                await Task.Delay(5000, stoppingToken);
             }
         }
     }
@@ -78,7 +78,6 @@ public class IncidentEventConsumer : BackgroundService
         catch (QueueDoesNotExistException)
         {
             _logger.LogWarning("Queue {QueueName} does not exist. Will retry...", queueName);
-            // Queue will be created by setup script, so we'll retry
             await Task.Delay(5000, cancellationToken);
             await InitializeQueueAsync(cancellationToken);
         }
@@ -88,8 +87,6 @@ public class IncidentEventConsumer : BackgroundService
     {
         try
         {
-            // SNS messages are wrapped in SQS messages
-            // The actual message body is in the Message attribute when sent via SNS
             var snsMessage = JsonSerializer.Deserialize<SNSMessage>(message.Body, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -116,11 +113,10 @@ public class IncidentEventConsumer : BackgroundService
 
             _logger.LogInformation("Processing IncidentCreated event for incident {IncidentId}", incidentEvent.Data?.ID);
 
-            // Process the event
+            // process eventin
             using var scope = _serviceProvider.CreateScope();
             var notificationSvc = scope.ServiceProvider.GetRequiredService<NotificationSvc>();
 
-            // Keep event validation simple here; core creation logic lives in NotificationSvc
             if (incidentEvent.Data?.CreatedByUserId is Guid createdByUserId)
             {
                 await notificationSvc.CreateIncidentCreatedNotification(
@@ -136,14 +132,12 @@ public class IncidentEventConsumer : BackgroundService
                 _logger.LogInformation("Created notification for incident {IncidentId}", incidentEvent.Data.ID);
             }
 
-            // Delete the message after successful processing
             await DeleteMessageAsync(message.ReceiptHandle);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing message. Message will be retried or moved to DLQ.");
-            // Don't delete the message so it can be retried
-            // In production, you might want to implement retry logic and DLQ handling
+            
         }
     }
 
@@ -159,7 +153,7 @@ public class IncidentEventConsumer : BackgroundService
         }
     }
 
-    // Helper classes for deserialization
+    // Helper classes per deserializim
     private class SNSMessage
     {
         public string Type { get; set; } = string.Empty;

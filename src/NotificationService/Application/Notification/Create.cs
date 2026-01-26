@@ -114,7 +114,7 @@ namespace NotificationService.Application.Notifications
                 // 1) ruaje ne DB
                 var notification = await _notificationService.CreateNotification(request, cancellationToken);
 
-                // 2) TEST: dergo email te TI (per momentin)
+                // 2) TEST: dergo email (per momentin veq 1)
                 await _emailSender.SendAsync(
                     "festimdibrani9@gmail.com",
                     request.Title,

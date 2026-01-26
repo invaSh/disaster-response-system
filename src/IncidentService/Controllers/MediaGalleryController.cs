@@ -8,7 +8,7 @@ namespace IncidentService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,User,IncMan")]
+   // [Authorize(Roles = "Admin,User,IncMan")]
     public class MediaGalleryController : ControllerBase
     {
         private readonly IncidentSvc _incidentService;

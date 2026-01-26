@@ -120,7 +120,7 @@ public class EmailNotificationConsumer : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing email notification message (will retry).");
-            // mos e fshi → SQS e retry
+            // mos e fshi se SQS e retry
         }
     }
 

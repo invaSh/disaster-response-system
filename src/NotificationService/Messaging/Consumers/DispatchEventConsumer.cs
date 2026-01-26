@@ -140,9 +140,7 @@ public class DispatchEventConsumer : BackgroundService
                 return;
             }
 
-            // Avoid duplicate notifications:
-            // DispatchOrderCompleted is published when everything is done (used by IncidentService),
-            // but NotificationService should notify users only on DispatchAssignmentCompleted.
+            // M'iu ik duplicates
             if (dispatchEvent.EventType == "DispatchOrderCompleted")
             {
                 _logger.LogInformation("Skipping DispatchOrderCompleted notification to avoid duplicates.");
@@ -150,7 +148,6 @@ public class DispatchEventConsumer : BackgroundService
                 return;
             }
 
-            // Requirement: only send "ekipa jane rruges" when assignment status == 1
             if (dispatchEvent.EventType == "DispatchAssignmentCreated")
             {
                 var statusStr = dispatchEvent.Data?.AssignmentStatus ?? string.Empty;
@@ -162,7 +159,6 @@ public class DispatchEventConsumer : BackgroundService
                 }
             }
 
-            // Requirement: send "u morrem..." when assignment status == 4
             if (dispatchEvent.EventType == "DispatchAssignmentCompleted")
             {
                 var statusStr = dispatchEvent.Data?.AssignmentStatus ?? string.Empty;

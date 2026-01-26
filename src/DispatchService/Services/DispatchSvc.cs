@@ -130,14 +130,12 @@ namespace DispatchService.Services
                 order.CreatedAt = DateTime.UtcNow;
                 order.CompletedAt = null;
                 
-                // Ensure Notes is initialized
                 if (order.Notes == null)
                     order.Notes = new List<string>();
 
                 _context.DispatchOrders.Add(order);
                 await _context.SaveChangesAsync(ct);
 
-                // Publish event for incident status update
                 var incidentCreatorUserId = await _context.Incidents
                     .AsNoTracking()
                     .Where(i => i.Id == order.IncidentId)
@@ -250,7 +248,6 @@ namespace DispatchService.Services
                         new { Status = "Dispatch order is not active." }
                     );
 
-                // Append new notes to existing notes array
                 if (dto.Notes != null && dto.Notes.Any())
                 {
                     if (order.Notes == null)
@@ -335,7 +332,7 @@ namespace DispatchService.Services
 
                 await _context.SaveChangesAsync(ct);
 
-                // Publish event for incident status update
+                // event kur incidentit i ndrron status
                 var incidentCreatorUserId = await _context.Incidents
                     .AsNoTracking()
                     .Where(i => i.Id == order.IncidentId)
@@ -404,7 +401,7 @@ namespace DispatchService.Services
                     
                     await _context.SaveChangesAsync(ct);
 
-                    // Notify user when assignment is completed (AssignmentStatus = 4)
+                    // event kur kryhet assignment
                     if (dto.Status == AssignmentStatus.Completed)
                     {
                         var incidentCreatorUserId = await _context.Incidents
@@ -421,7 +418,7 @@ namespace DispatchService.Services
                             incidentCreatorUserId), ct);
                     }
                     
-                    // Publish event for incident status update
+                    // event kur incidentit i ndrron status
                     _ = Task.Run(async () => await _eventPublisher.PublishDispatchOrderCompletedAsync(
                         assignment.DispatchOrder.Id, 
                         assignment.DispatchOrder.IncidentId,
@@ -435,7 +432,6 @@ namespace DispatchService.Services
                 {
                     await _context.SaveChangesAsync(ct);
 
-                    // Notify user when assignment is completed (AssignmentStatus = 4)
                     if (dto.Status == AssignmentStatus.Completed)
                     {
                         var incidentCreatorUserId = await _context.Incidents
