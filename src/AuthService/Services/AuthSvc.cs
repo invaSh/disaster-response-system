@@ -26,7 +26,7 @@ namespace AuthService.Services
         {
             try
             {
-                // Validate RoleType is either Admin (1) or User (2)
+                // validimi
                 if (roleType != RoleType.Admin && roleType != RoleType.User && roleType != RoleType.IncMan && roleType != RoleType.DisMan)
                     throw new StatusException(HttpStatusCode.BadRequest, "ValidationError", "RoleType must be either Admin (1) or User (2) or IncMan (3) or DisMan (4).", new { RoleType = "Invalid role type." });
 
@@ -34,7 +34,7 @@ namespace AuthService.Services
                 if (existing != null)
                     throw new StatusException(HttpStatusCode.Conflict, "Duplicate", "User already exists.", new { Email = "Email is already registered." });
 
-                // Find the role based on RoleType
+                // gjeje bazuar ne rol 
                 var role = await _context.Roles.FirstOrDefaultAsync(r => r.RoleType == roleType);
                 if (role == null)
                     throw new StatusException(HttpStatusCode.NotFound, "NotFound", $"Role with RoleType {roleType} not found. Please ensure roles are seeded in the database.", new { RoleType = "Role does not exist." });
@@ -49,7 +49,6 @@ namespace AuthService.Services
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                // Create UserRole relationship
                 var userRole = new UserRole
                 {
                     UserId = user.Id,

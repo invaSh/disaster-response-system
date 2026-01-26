@@ -29,7 +29,6 @@ namespace AuthService.Services
         {
             try
             {
-                // Validate RoleType is either Admin (1) 
                 if (roleType != RoleType.Admin)
                     throw new StatusException(HttpStatusCode.BadRequest, "ValidationError", "RoleType must be Admin (1)", new { RoleType = "Invalid role type." });
 
@@ -78,7 +77,6 @@ namespace AuthService.Services
 
                 if (name != null)
                 {
-                    // Check if name is already taken by another role
                     var existing = await _context.Roles.FirstOrDefaultAsync(r => r.Name == name && r.Id != id);
                     if (existing != null)
                         throw new StatusException(HttpStatusCode.Conflict, "Duplicate", "Role with this name already exists.", new { Name = "Role name must be unique." });
@@ -88,7 +86,6 @@ namespace AuthService.Services
 
                 if (roleType.HasValue)
                 {
-                    // Validate RoleType is either Admin (1) or User (2)
                     if (roleType.Value != RoleType.Admin)
                         throw new StatusException(HttpStatusCode.BadRequest, "ValidationError", "RoleType must be Admin (1)", new { RoleType = "Invalid role type." });
 
