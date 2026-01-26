@@ -43,7 +43,7 @@ public class DispatchEventConsumer : BackgroundService
                 {
                     QueueUrl = _queueUrl,
                     MaxNumberOfMessages = 10,
-                    WaitTimeSeconds = 20, // Long polling
+                    WaitTimeSeconds = 20, // long polling
                     MessageAttributeNames = new List<string> { "All" }
                 };
 
@@ -129,23 +129,18 @@ public class DispatchEventConsumer : BackgroundService
                 return;
             }
 
-            // Update incident status based on event type
+            // update statusin e incidentit bazuar ne events:
             Status newStatus = dispatchEvent.EventType switch
             {
                 "DispatchOrderCreated" => Status.Acknowledged,
                 "DispatchAssignmentCreated" => Status.InProgress,
-                // When an assignment is completed, mark the incident as completed/resolved.
-                // Enum values: InProgress = 2, Resolved = 3 (matches expected behavior).
                 "DispatchAssignmentCompleted" => Status.Resolved,
                 "DispatchOrderCompleted" => Status.Resolved,
                 _ => throw new InvalidOperationException($"Unknown event type: {dispatchEvent.EventType}")
             };
 
-            // Get the incident to update
             var incident = await incidentService.GetIncidentById(incidentId);
 
-            // Keep track of assigned units when an assignment is created
-            // (DispatchService now includes UnitId in the event payload).
             var updatedAssignedUnits = incident.AssignedUnits?.ToList() ?? new List<Guid>();
             if (dispatchEvent.EventType == "DispatchAssignmentCreated")
             {
@@ -160,9 +155,7 @@ public class DispatchEventConsumer : BackgroundService
                 }
             }
             
-            // Update status using the Update command pattern via MediatR
-            // This ensures IncidentUpdated event is published so DispatchService can sync the status.
-            // Note: Update.Command requires Title, Description, Latitude, Longitude per validator
+            // update status me MediatR
             var updateCommand = new Update.Command
             {
                 ID = incidentId,
@@ -183,19 +176,17 @@ public class DispatchEventConsumer : BackgroundService
                 Metadata = incident.Metadata
             };
 
-            // Use MediatR to send the command - this triggers the Handler which publishes IncidentUpdated event
             await mediator.Send(updateCommand, cancellationToken);
             
             _logger.LogInformation("Updated incident {IncidentId} status to {Status} based on {EventType}. IncidentUpdated event published.", 
                 incidentId, newStatus, dispatchEvent.EventType);
 
-            // Delete the message after successful processing
             await DeleteMessageAsync(message.ReceiptHandle);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing message. Message will be retried or moved to DLQ.");
-            // Don't delete the message so it can be retried
+
         }
     }
 
@@ -211,7 +202,7 @@ public class DispatchEventConsumer : BackgroundService
         }
     }
 
-    // Helper classes for deserialization
+    // Helper classes per deserializim
     private class SNSMessage
     {
         public string Type { get; set; } = string.Empty;
