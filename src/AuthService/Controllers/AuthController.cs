@@ -1,4 +1,3 @@
-﻿using AuthService.Application.Auth;
 using AuthService.DTOs.Auth;
 using AuthService.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -19,34 +18,20 @@ namespace AuthService.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDTO request)
         {
-            try
+            var user = await _authService.RegisterAsync(request.Email, request.Password, request.RoleType);
+            return Ok(new
             {
-                var user = await _authService.RegisterAsync(request.Email, request.Password, request.RoleType);
-                return Ok(new
-                {
-                    user.Id,
-                    user.Email,
-                    RoleType = request.RoleType
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+                user.Id,
+                user.Email,
+                RoleType = request.RoleType
+            });
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDTO request)
         {
-            try
-            {
-                var result = await _authService.LoginAsync(request.Email, request.Password);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
+            var result = await _authService.LoginAsync(request.Email, request.Password);
+            return Ok(result);
         }
     }
 }

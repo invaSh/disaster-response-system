@@ -1,7 +1,9 @@
-﻿using AuthService.Persistence;
+using AuthService.Persistence;
 using AuthService.Domain;
 using AuthService.Enums;
+using AuthService.Helpers;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 
 namespace AuthService.Services
 {
@@ -15,36 +17,67 @@ namespace AuthService.Services
             return await _context.Users.ToListAsync();
         }
 
-        public async Task<User?> GetUserByIdAsync(Guid id)
+        public async Task<User> GetUserByIdAsync(Guid id)
         {
-            return await _context.Users.FindAsync(id);
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+                throw new StatusException(HttpStatusCode.NotFound, "NotFound", "User not found.", new { Id = "User does not exist." });
+            return user;
         }
 
         public async Task<bool> DeleteUserAsync(Guid id)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return false;
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user == null)
+                    throw new StatusException(HttpStatusCode.NotFound, "NotFound", "User not found.", new { Id = "User does not exist." });
 
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
-            return true;
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (StatusException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw HelperService.MapToStatusException(ex);
+            }
         }
 
         public async Task<User?> UpdateUserAsync(Guid id, string? email, UserStatus? status)
         {
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
-                return null;
+            try
+            {
+                var user = await _context.Users.FindAsync(id);
+                if (user == null)
+                    throw new StatusException(HttpStatusCode.NotFound, "NotFound", "User not found.", new { Id = "User does not exist." });
 
-            if (email != null)
-                user.Email = email;
+                if (email != null)
+                {
+                    var existing = await _context.Users.FirstOrDefaultAsync(u => u.Email == email && u.Id != id);
+                    if (existing != null)
+                        throw new StatusException(HttpStatusCode.Conflict, "Duplicate", "Email already exists.", new { Email = "Email must be unique." });
+                    
+                    user.Email = email;
+                }
 
-            if (status.HasValue)
-                user.Status = status.Value;
+                if (status.HasValue)
+                    user.Status = status.Value;
 
-            await _context.SaveChangesAsync();
-            return user;
+                await _context.SaveChangesAsync();
+                return user;
+            }
+            catch (StatusException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw HelperService.MapToStatusException(ex);
+            }
         }
     }
 

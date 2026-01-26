@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace NotificationService.Helpers
+namespace AuthService.Helpers
 {
     public class StatusException : Exception
     {

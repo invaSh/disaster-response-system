@@ -1,16 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 
-namespace NotificationService.Helpers
+namespace AuthService.Helpers
 {
     public static class HelperService
     {
-        public static string GenerateNotificationCode()
-        {
-            var suffix = Guid.NewGuid().ToString("N")[..4].ToUpper();
-            return $"NOT-{suffix}";
-        }
-
         public static StatusException MapToStatusException(Exception ex)
         {
             return ex switch
@@ -18,7 +12,7 @@ namespace NotificationService.Helpers
                 DbUpdateException => new StatusException(
                     HttpStatusCode.Conflict,
                     "DatabaseError",
-                    "Failed to update notification due to database constraint violation",
+                    "Failed to update database due to constraint violation",
                     ex.StackTrace ?? string.Empty
                 ),
 

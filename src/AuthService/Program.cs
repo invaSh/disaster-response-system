@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using AuthService.Domain;
 using AuthService.Enums;
 using AuthService.Helpers;
+using AuthService.Middlewares;
 using AuthService.Persistence;
 using AuthService.Services;
 
@@ -100,6 +101,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseAuthentication(); 
 app.UseAuthorization();
